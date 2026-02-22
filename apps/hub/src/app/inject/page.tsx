@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 export default function InjectPage() {
-  const [ids, setIds] = useState("0711:product:bosch:7736606982:v3");
+  const [ids, setIds] = useState("0711:product:acme:widget-001:v1");
   const [format, setFormat] = useState<"markdown" | "json" | "yaml">("markdown");
   const [verify, setVerify] = useState(true);
   const [result, setResult] = useState<any>(null);
@@ -18,7 +18,8 @@ export default function InjectPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ containers: containerIds, verify, format }),
       });
-      setResult(await response.json());
+      const data = await response.json();
+      setResult(data);
     } catch (err: any) {
       setResult({ error: err.message });
     }
@@ -43,7 +44,7 @@ export default function InjectPage() {
               onChange={(e) => setIds(e.target.value)}
               rows={6}
               className="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 font-mono text-sm"
-              placeholder="0711:product:bosch:7736606982:v3"
+              placeholder="0711:product:acme:widget-001:v1"
             />
           </div>
 
@@ -86,7 +87,7 @@ export default function InjectPage() {
         <div>
           <div className="flex justify-between items-center mb-2">
             <label className="text-sm text-gray-400">Result</label>
-            {result && (
+            {result && !result.error && (
               <div className="flex gap-4 text-sm">
                 <span className={result.verified ? "text-emerald-400" : "text-yellow-400"}>
                   {result.verified ? "✓ Verified" : "⚠ Unverified"}

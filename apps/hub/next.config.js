@@ -4,4 +4,4 @@ const nextConfig = {
   transpilePackages: ["@0711/core"],
 };
 
-module.exports = nextConfig;
+export default nextConfig;

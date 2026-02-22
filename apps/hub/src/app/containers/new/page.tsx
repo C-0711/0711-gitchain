@@ -71,7 +71,7 @@ export default function NewContainerPage() {
               type="text"
               value={form.namespace}
               onChange={(e) => setForm({ ...form, namespace: e.target.value })}
-              placeholder="e.g., bosch"
+              placeholder="e.g., acme"
               className="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3"
               required
             />
@@ -82,7 +82,7 @@ export default function NewContainerPage() {
               type="text"
               value={form.identifier}
               onChange={(e) => setForm({ ...form, identifier: e.target.value })}
-              placeholder="e.g., 7736606982"
+              placeholder="e.g., widget-001"
               className="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3"
               required
             />
@@ -95,9 +95,20 @@ export default function NewContainerPage() {
             type="text"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Display name"
+            placeholder="Display name for this container"
             className="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3"
             required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm text-gray-400 mb-2">Description (optional)</label>
+          <input
+            type="text"
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            placeholder="Brief description"
+            className="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3"
           />
         </div>
 

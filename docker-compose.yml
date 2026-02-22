@@ -1,40 +1,17 @@
-version: "3.8"
-
 services:
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
     ports:
-      - "3000:3000"
+      - "3100:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
       - GITCHAIN_DATA_DIR=/data/repos
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
     volumes:
       - gitchain-data:/data
-    depends_on:
-      - redis
-
-  hub:
-    build:
-      context: .
-      dockerfile: apps/hub/Dockerfile
-    ports:
-      - "3001:3000"
-    environment:
-      - NODE_ENV=production
-      - API_URL=http://api:3000
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
+    restart: unless-stopped
 
 volumes:
   gitchain-data:
-  redis-data:

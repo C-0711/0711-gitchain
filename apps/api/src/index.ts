@@ -30,6 +30,24 @@ app.use(express.json());
 app.use(apiKeyAuth);
 app.use(rateLimit(60));
 
+// Root - API info
+app.get("/", (req, res) => {
+  res.json({
+    name: "0711-GitChain API",
+    version: "0.1.0",
+    description: "Blockchain-verified context injection for AI agents",
+    endpoints: {
+      health: "GET /health",
+      graphql: "POST /graphql",
+      inject: "POST /api/inject",
+      containers: "GET /api/containers/:id",
+      verify: "GET /api/verify/:id",
+      search: "GET /api/search?q=...",
+    },
+    docs: "https://gitchain.0711.io/docs",
+  });
+});
+
 // Health check
 app.get("/health", (req, res) => {
   res.json({
@@ -132,7 +150,5 @@ app.use("/graphql", createYoga({ schema }));
 
 // Start
 app.listen(PORT, () => {
-  console.log(`GitChain API on port ${PORT}`);
-  console.log(`  REST:    http://localhost:${PORT}/api`);
-  console.log(`  GraphQL: http://localhost:${PORT}/graphql`);
+  console.log(`GitChain API running on port ${PORT}`);
 });

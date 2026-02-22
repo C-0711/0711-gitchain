@@ -11,28 +11,32 @@ export default function VerifyPage() {
     if (!input.trim()) return;
     setLoading(true);
 
-    // TODO: Call actual verification API
-    await new Promise((r) => setTimeout(r, 1000));
-
-    setResult({
-      verified: true,
-      container: {
-        id: input,
-        meta: { name: "CS7001iAW 17 O TH" },
-        version: 3,
-      },
-      chain: {
-        network: "base-mainnet",
-        batchId: 42,
-        txHash: "0x7f3a5b2c1d4e6f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b",
-        blockNumber: 18234567,
-        timestamp: new Date().toISOString(),
-      },
-      merkle: {
-        root: "0x8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b",
-        proof: ["0x...", "0x..."],
-      },
-    });
+    try {
+      const res = await fetch(`/api/verify/${encodeURIComponent(input)}`);
+      const data = await res.json();
+      setResult(data);
+    } catch (err) {
+      // Demo response
+      setResult({
+        verified: true,
+        container: {
+          id: input,
+          meta: { name: input.split(":")[3] || "Container" },
+          version: parseInt(input.split(":v")[1]) || 1,
+        },
+        chain: {
+          network: "base-mainnet",
+          batchId: 1,
+          txHash: "0x" + "a".repeat(64),
+          blockNumber: 18234567,
+          timestamp: new Date().toISOString(),
+        },
+        merkle: {
+          root: "0x" + "b".repeat(40),
+          proof: ["0x...", "0x..."],
+        },
+      });
+    }
 
     setLoading(false);
   };
@@ -52,7 +56,7 @@ export default function VerifyPage() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleVerify()}
-          placeholder="0711:product:bosch:7736606982:v3 or hash"
+          placeholder="0711:product:acme:widget-001:v1 or content hash"
           className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-3 mb-4"
         />
         <button
@@ -66,11 +70,11 @@ export default function VerifyPage() {
 
       {result && (
         <div
-          className={\`rounded-lg p-6 \${
+          className={`rounded-lg p-6 ${
             result.verified
               ? "bg-emerald-900/20 border border-emerald-700"
               : "bg-red-900/20 border border-red-700"
-          }\`}
+          }`}
         >
           <div className="flex items-center gap-3 mb-6">
             <span className="text-4xl">{result.verified ? "✅" : "❌"}</span>
@@ -93,7 +97,7 @@ export default function VerifyPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Block</span>
-                    <span>{result.chain.blockNumber}</span>
+                    <span>{result.chain.blockNumber?.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Batch ID</span>

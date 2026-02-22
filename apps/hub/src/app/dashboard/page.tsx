@@ -29,38 +29,53 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Fetch from API
-    setStats({
-      containers: 23141,
-      namespaces: 5,
-      batches: 42,
-      verified: 23141,
-    });
-    setActivity([
-      {
-        id: "1",
-        action: "created",
-        containerId: "0711:product:bosch:7736606982:v3",
-        containerName: "CS7001iAW 17 O TH",
-        timestamp: "2 min ago",
-      },
-      {
-        id: "2",
-        action: "updated",
-        containerId: "0711:product:bosch:7738601997:v2",
-        containerName: "CS7001i AW 13 OR-T",
-        timestamp: "15 min ago",
-      },
-      {
-        id: "3",
-        action: "verified",
-        containerId: "0711:product:bosch:7735500395:v1",
-        containerName: "Compress 7000i AW",
-        timestamp: "1 hour ago",
-      },
-    ]);
-    setLoading(false);
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      // Try API first
+      const res = await fetch("/api/stats").catch(() => null);
+      if (res?.ok) {
+        const data = await res.json();
+        setStats(data.stats || { containers: 0, namespaces: 0, batches: 0, verified: 0 });
+        setActivity(data.activity || []);
+      } else {
+        // Demo data
+        setStats({
+          containers: 3,
+          namespaces: 2,
+          batches: 1,
+          verified: 3,
+        });
+        setActivity([
+          {
+            id: "1",
+            action: "created",
+            containerId: "0711:product:acme:widget-001:v2",
+            containerName: "Smart Widget Pro",
+            timestamp: "2 min ago",
+          },
+          {
+            id: "2",
+            action: "verified",
+            containerId: "0711:campaign:demo:launch-2026:v1",
+            containerName: "Product Launch Q1",
+            timestamp: "15 min ago",
+          },
+          {
+            id: "3",
+            action: "updated",
+            containerId: "0711:knowledge:demo:user-guide:v3",
+            containerName: "Platform User Guide",
+            timestamp: "1 hour ago",
+          },
+        ]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
@@ -72,7 +87,6 @@ export default function DashboardPage() {
           title="Containers"
           value={stats.containers.toLocaleString()}
           icon="📦"
-          trend="+124 today"
         />
         <StatCard
           title="Namespaces"
@@ -80,14 +94,13 @@ export default function DashboardPage() {
           icon="📁"
         />
         <StatCard
-          title="Batches"
+          title="Chain Batches"
           value={stats.batches.toString()}
           icon="⛓️"
-          trend="+2 today"
         />
         <StatCard
           title="Verified"
-          value={`${((stats.verified / stats.containers) * 100).toFixed(1)}%`}
+          value={stats.containers > 0 ? `${((stats.verified / stats.containers) * 100).toFixed(0)}%` : "0%"}
           icon="✅"
         />
       </div>
@@ -102,11 +115,11 @@ export default function DashboardPage() {
           <p className="text-gray-400 text-sm">Add a new container to GitChain</p>
         </Link>
         <Link
-          href="/batch"
+          href="/inject"
           className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-6 hover:border-blue-500 transition"
         >
-          <h3 className="font-semibold mb-2">Batch Upload</h3>
-          <p className="text-gray-400 text-sm">Register multiple containers at once</p>
+          <h3 className="font-semibold mb-2">Inject Context</h3>
+          <p className="text-gray-400 text-sm">Test the inject API playground</p>
         </Link>
         <Link
           href="/verify"
@@ -120,32 +133,36 @@ export default function DashboardPage() {
       {/* Recent Activity */}
       <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
         <h2 className="text-lg font-semibold mb-4">Recent Activity</h2>
-        <div className="space-y-4">
-          {activity.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center justify-between py-3 border-b border-gray-700 last:border-0"
-            >
-              <div className="flex items-center gap-4">
-                <span className="text-2xl">
-                  {item.action === "created" && "📦"}
-                  {item.action === "updated" && "✏️"}
-                  {item.action === "verified" && "✅"}
-                </span>
-                <div>
-                  <Link
-                    href={`/containers/${encodeURIComponent(item.containerId)}`}
-                    className="font-medium hover:text-emerald-400"
-                  >
-                    {item.containerName}
-                  </Link>
-                  <p className="text-sm text-gray-400">{item.action}</p>
+        {activity.length === 0 ? (
+          <p className="text-gray-400">No recent activity</p>
+        ) : (
+          <div className="space-y-4">
+            {activity.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center justify-between py-3 border-b border-gray-700 last:border-0"
+              >
+                <div className="flex items-center gap-4">
+                  <span className="text-2xl">
+                    {item.action === "created" && "📦"}
+                    {item.action === "updated" && "✏️"}
+                    {item.action === "verified" && "✅"}
+                  </span>
+                  <div>
+                    <Link
+                      href={`/containers/${encodeURIComponent(item.containerId)}`}
+                      className="font-medium hover:text-emerald-400"
+                    >
+                      {item.containerName}
+                    </Link>
+                    <p className="text-sm text-gray-400">{item.action}</p>
+                  </div>
                 </div>
+                <span className="text-sm text-gray-500">{item.timestamp}</span>
               </div>
-              <span className="text-sm text-gray-500">{item.timestamp}</span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -155,12 +172,10 @@ function StatCard({
   title,
   value,
   icon,
-  trend,
 }: {
   title: string;
   value: string;
   icon: string;
-  trend?: string;
 }) {
   return (
     <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
@@ -169,7 +184,6 @@ function StatCard({
         <span className="text-gray-400">{title}</span>
       </div>
       <div className="text-3xl font-bold">{value}</div>
-      {trend && <div className="text-sm text-emerald-400 mt-1">{trend}</div>}
     </div>
   );
 }

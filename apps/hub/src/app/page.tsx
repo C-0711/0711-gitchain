@@ -45,7 +45,7 @@ export default function Home() {
           <code className="text-emerald-400">{`import { inject } from "@0711/inject";
 
 const context = await inject({
-  containers: ["0711:product:bosch:7736606982:v3"],
+  containers: ["0711:product:acme:widget-001:v1"],
   verify: true,
   format: "markdown"
 });

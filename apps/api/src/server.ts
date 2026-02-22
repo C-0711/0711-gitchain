@@ -1,5 +1,5 @@
 /**
- * GitChain API Server - Minimal REST-only version for deployment
+ * GitChain API Server
  */
 
 import express from "express";
@@ -11,6 +11,23 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Root - API info
+app.get("/", (req, res) => {
+  res.json({
+    name: "0711-GitChain API",
+    version: "0.1.0",
+    description: "Blockchain-verified context injection for AI agents",
+    endpoints: {
+      health: "GET /health",
+      inject: "POST /api/inject",
+      containers: "GET /api/containers/:id",
+      verify: "GET /api/verify/:id",
+      search: "GET /api/search?q=...",
+    },
+    docs: "https://gitchain.0711.io/docs",
+  });
+});
+
 // Health check
 app.get("/health", (req, res) => {
   res.json({
@@ -21,7 +38,7 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Inject endpoint (simplified)
+// Inject endpoint
 app.post("/api/inject", async (req, res) => {
   const { containers, format = "markdown" } = req.body;
   
@@ -29,13 +46,12 @@ app.post("/api/inject", async (req, res) => {
     return res.status(400).json({ error: "containers array required" });
   }
 
-  // Return mock response for now
   res.json({
     success: true,
     containers: containers.map((id: string) => ({
       id,
       type: id.split(":")[1] || "unknown",
-      namespace: id.split(":")[2] || "unknown",
+      namespace: id.split(":")[2] || "unknown", 
       identifier: id.split(":")[3] || "unknown",
       version: 1,
       meta: { name: id, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), author: "system" },

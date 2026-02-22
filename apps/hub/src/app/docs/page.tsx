@@ -58,16 +58,25 @@ export default function DocsPage() {
 import { inject } from "@0711/inject";
 
 const context = await inject({
-  containers: ["0711:product:bosch:7736606982:v3"],
+  containers: ["0711:product:acme:widget-001:v1"],
 });
 
 # Python
 from gitchain import inject
 
 context = inject(
-    containers=["0711:product:bosch:7736606982:v3"]
+    containers=["0711:product:acme:widget-001:v1"]
 )`}</code>
         </pre>
+      </div>
+
+      <div className="mt-8 p-6 bg-blue-900/20 border border-blue-700 rounded-lg">
+        <h2 className="font-semibold mb-2">📘 Container ID Format</h2>
+        <code className="text-blue-400">0711:{"{type}"}:{"{namespace}"}:{"{identifier}"}:{"{version}"}</code>
+        <div className="mt-4 text-sm text-gray-400">
+          <p><strong>Types:</strong> product, campaign, project, memory, knowledge</p>
+          <p><strong>Example:</strong> <code className="text-emerald-400">0711:product:acme:widget-001:v2</code></p>
+        </div>
       </div>
     </div>
   );
