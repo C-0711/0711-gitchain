@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "3100:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - GITCHAIN_DATA_DIR=/data/repos
+      - REDIS_HOST=redis
+    volumes:
+      - /home/christoph.bertsch/0711/gitchain-data/repos:/data/repos
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - gitchain-redis:/data
+    restart: unless-stopped
+
+volumes:
+  gitchain-redis:
