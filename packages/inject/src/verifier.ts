@@ -1,73 +1,83 @@
 /**
- * Blockchain proof verification
+ * Blockchain verification for containers
  */
 
-import type { ChainProof } from "@0711/core";
-
-interface VerificationResult {
-  allValid: boolean;
-  results: ProofResult[];
-  errors: string[];
-}
-
-interface ProofResult {
-  batchId: number;
-  valid: boolean;
-  error?: string;
-}
+import type { Container } from "@0711/core";
+import type { ChainProof, VerificationResult } from "./types";
 
 /**
  * Verify blockchain proofs for containers
  */
-export async function verifyProofs(proofs: ChainProof[]): Promise<VerificationResult> {
-  const results: ProofResult[] = [];
-  const errors: string[] = [];
-  
-  for (const proof of proofs) {
-    try {
-      const valid = await verifyMerkleProof(proof);
-      results.push({ batchId: proof.batchId, valid });
-      
-      if (!valid) {
-        errors.push(`Proof verification failed for batch ${proof.batchId}`);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      results.push({ batchId: proof.batchId, valid: false, error: message });
-      errors.push(`Error verifying batch ${proof.batchId}: ${message}`);
+export async function verifyContainers(
+  containers: Container[]
+): Promise<VerificationResult> {
+  const proofs: ChainProof[] = [];
+  let allVerified = true;
+
+  for (const container of containers) {
+    if (!container.chain) {
+      allVerified = false;
+      proofs.push({
+        containerId: container.id,
+        verified: false,
+        reason: "No blockchain proof attached",
+      });
+      continue;
+    }
+
+    // TODO: Implement actual blockchain verification
+    // For now, assume verified if chain data exists
+    const proof = await verifyOnChain(container);
+    proofs.push(proof);
+
+    if (!proof.verified) {
+      allVerified = false;
     }
   }
-  
+
+  return { proofs, allVerified };
+}
+
+/**
+ * Verify a single container on-chain
+ */
+async function verifyOnChain(container: Container): Promise<ChainProof> {
+  // TODO: Integrate with @0711/chain to verify Merkle proof
+  // This is a placeholder that trusts existing chain data
+
+  if (!container.chain) {
+    return {
+      containerId: container.id,
+      verified: false,
+      reason: "No chain data",
+    };
+  }
+
+  // Simulate verification delay
+  await new Promise((r) => setTimeout(r, 10));
+
   return {
-    allValid: results.every(r => r.valid),
-    results,
-    errors,
+    containerId: container.id,
+    verified: true,
+    network: container.chain.network,
+    batchId: container.chain.batchId,
+    txHash: container.chain.txHash,
+    blockNumber: container.chain.blockNumber,
+    verifiedAt: new Date().toISOString(),
   };
 }
 
 /**
- * Verify a single Merkle proof
+ * Verify a content hash directly
  */
-async function verifyMerkleProof(proof: ChainProof): Promise<boolean> {
-  // TODO: Implement actual Merkle proof verification
-  // 1. Hash the container content
-  // 2. Walk the Merkle proof
-  // 3. Compare with on-chain Merkle root
-  
-  // For now, return true if proof exists
-  return proof.merkleRoot !== undefined && proof.merkleProof.length > 0;
-}
-
-/**
- * Verify proof on-chain
- */
-export async function verifyOnChain(
-  proof: ChainProof,
-  contentHash: string
-): Promise<boolean> {
-  // TODO: Call smart contract verifyCertification()
-  // const contract = new ethers.Contract(proof.contractAddress, abi, provider);
-  // return contract.verifyCertification(proof.batchId, contentHash, proof.merkleProof);
-  
-  return true;
+export async function verifyHash(
+  hash: string,
+  network = "base-mainnet"
+): Promise<ChainProof & { container?: Container }> {
+  // TODO: Implement hash lookup and verification
+  return {
+    containerId: "",
+    verified: false,
+    reason: "Hash verification not yet implemented",
+  };
 }

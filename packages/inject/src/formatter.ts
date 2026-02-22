@@ -2,167 +2,207 @@
  * Format containers for LLM consumption
  */
 
-import type { Container, Citation } from "@0711/core";
+import type { Container } from "@0711/core";
 
-interface FormatLLMOptions {
-  format?: "markdown" | "json" | "yaml";
-  includeCitations?: boolean;
-  includeProofs?: boolean;
+interface FormatOptions {
+  format: "markdown" | "json" | "yaml";
+  includeCitations: boolean;
+  includeProofs: boolean;
   maxTokens?: number;
 }
 
 /**
- * Format containers for LLM-friendly output
+ * Format containers into LLM-ready context
  */
-export function formatForLLM(
+export function formatContext(
   containers: Container[],
-  options: FormatLLMOptions = {}
+  options: FormatOptions
 ): string {
-  const {
-    format = "markdown",
-    includeCitations = true,
-    includeProofs = true,
-  } = options;
+  const { format, includeCitations, includeProofs, maxTokens } = options;
+
+  let output: string;
 
   switch (format) {
     case "json":
-      return formatAsJSON(containers, includeCitations);
+      output = formatJSON(containers, { includeCitations, includeProofs });
+      break;
     case "yaml":
-      return formatAsYAML(containers, includeCitations);
+      output = formatYAML(containers, { includeCitations, includeProofs });
+      break;
     case "markdown":
     default:
-      return formatAsMarkdown(containers, includeCitations, includeProofs);
+      output = formatMarkdown(containers, { includeCitations, includeProofs });
   }
+
+  // Truncate if needed
+  if (maxTokens) {
+    const maxChars = maxTokens * 4;
+    if (output.length > maxChars) {
+      output = output.slice(0, maxChars) + "\n\n[...truncated]";
+    }
+  }
+
+  return output;
 }
 
-function formatAsMarkdown(
+function formatMarkdown(
   containers: Container[],
-  includeCitations: boolean,
-  includeProofs: boolean
+  opts: { includeCitations: boolean; includeProofs: boolean }
 ): string {
-  const sections: string[] = [];
+  const lines: string[] = [];
 
-  sections.push("# Verified Context (GitChain)\n");
-  sections.push(`> ${containers.length} container(s) loaded. All data is blockchain-verified.\n`);
+  lines.push("# Verified Context");
+  lines.push("");
+  lines.push(\`> \${containers.length} container(s) | Verified by GitChain\`);
+  lines.push("");
 
   for (const container of containers) {
-    sections.push(`## ${container.meta.name}`);
-    sections.push(`**ID:** \`${container.id}\``);
-    sections.push(`**Type:** ${container.type}`);
-    sections.push(`**Version:** v${container.version}`);
-    sections.push(`**Updated:** ${container.meta.updatedAt}\n`);
+    lines.push(\`## \${container.meta.name}\`);
+    lines.push("");
+    lines.push(\`**ID:** \\\`\${container.id}\\\`\`);
+    lines.push(\`**Type:** \${container.type} | **Version:** v\${container.version}\`);
+    lines.push("");
 
-    // Format data based on container type
-    if (container.type === "product") {
-      sections.push(formatProductData(container.data));
-    } else {
-      sections.push("### Data");
-      sections.push("```json");
-      sections.push(JSON.stringify(container.data, null, 2));
-      sections.push("```");
+    // Add data
+    if (container.data) {
+      lines.push("### Data");
+      lines.push("");
+      formatDataMarkdown(container.data, lines, 0);
+      lines.push("");
     }
 
-    // Citations
-    if (includeCitations && container.citations && container.citations.length > 0) {
-      sections.push("\n### Sources");
-      const citationSummary = summarizeCitations(container.citations);
-      sections.push(citationSummary);
-    }
-
-    // Blockchain proof
-    if (includeProofs && container.chain) {
-      sections.push("\n### Blockchain Proof");
-      sections.push(`- **Network:** ${container.chain.network}`);
-      sections.push(`- **Batch ID:** ${container.chain.batchId}`);
-      if (container.chain.txHash) {
-        sections.push(`- **TX:** \`${container.chain.txHash.slice(0, 18)}...\``);
+    // Add citations
+    if (opts.includeCitations && container.citations?.length) {
+      lines.push("### Sources");
+      lines.push("");
+      for (const citation of container.citations) {
+        const page = citation.page ? \` (p.\${citation.page})\` : "";
+        lines.push(\`- \${citation.documentId}\${page} [\${citation.confidence}]\`);
       }
-      sections.push(`- **Verified:** ✅`);
+      lines.push("");
     }
 
-    sections.push("\n---\n");
-  }
-
-  return sections.join("\n");
-}
-
-function formatProductData(data: Record<string, unknown>): string {
-  const lines: string[] = ["### Product Specifications"];
-  
-  const features = data.features as Array<{
-    code: string;
-    name: string;
-    value: unknown;
-    unit?: string;
-  }>;
-
-  if (features && features.length > 0) {
-    for (const feature of features.slice(0, 20)) { // Limit for context
-      const value = feature.value ?? "N/A";
-      const unit = feature.unit ? ` ${feature.unit}` : "";
-      lines.push(`- **${feature.name}:** ${value}${unit}`);
+    // Add proof
+    if (opts.includeProofs && container.chain) {
+      lines.push("### Blockchain Proof");
+      lines.push("");
+      lines.push(\`- **Network:** \${container.chain.network}\`);
+      lines.push(\`- **Batch:** \${container.chain.batchId}\`);
+      if (container.chain.txHash) {
+        lines.push(\`- **TX:** \\\`\${container.chain.txHash}\\\`\`);
+      }
+      lines.push("");
     }
-    
-    if (features.length > 20) {
-      lines.push(`\n*...and ${features.length - 20} more features*`);
-    }
+
+    lines.push("---");
+    lines.push("");
   }
 
   return lines.join("\n");
 }
 
-function summarizeCitations(citations: Citation[]): string {
-  const byDocument = new Map<string, number>();
-  let confirmed = 0;
-  
-  for (const citation of citations) {
-    byDocument.set(
-      citation.documentId,
-      (byDocument.get(citation.documentId) || 0) + 1
-    );
-    if (citation.confidence === "confirmed") confirmed++;
+function formatDataMarkdown(
+  data: unknown,
+  lines: string[],
+  indent: number
+): void {
+  const prefix = "  ".repeat(indent);
+
+  if (Array.isArray(data)) {
+    for (const item of data) {
+      if (typeof item === "object" && item !== null) {
+        lines.push(\`\${prefix}-\`);
+        formatDataMarkdown(item, lines, indent + 1);
+      } else {
+        lines.push(\`\${prefix}- \${item}\`);
+      }
+    }
+  } else if (typeof data === "object" && data !== null) {
+    for (const [key, value] of Object.entries(data)) {
+      if (typeof value === "object" && value !== null) {
+        lines.push(\`\${prefix}**\${key}:**\`);
+        formatDataMarkdown(value, lines, indent + 1);
+      } else {
+        lines.push(\`\${prefix}**\${key}:** \${value}\`);
+      }
+    }
+  } else {
+    lines.push(\`\${prefix}\${data}\`);
   }
-
-  const lines: string[] = [];
-  lines.push(`- **Total citations:** ${citations.length}`);
-  lines.push(`- **Confirmed:** ${confirmed} (${Math.round(confirmed / citations.length * 100)}%)`);
-  lines.push(`- **Source documents:** ${byDocument.size}`);
-
-  return lines.join("\n");
 }
 
-function formatAsJSON(containers: Container[], includeCitations: boolean): string {
-  const output = containers.map(c => ({
+function formatJSON(
+  containers: Container[],
+  opts: { includeCitations: boolean; includeProofs: boolean }
+): string {
+  const output = containers.map((c) => ({
     id: c.id,
     type: c.type,
     version: c.version,
     meta: c.meta,
     data: c.data,
-    citations: includeCitations ? c.citations : undefined,
-    chain: c.chain,
+    ...(opts.includeCitations && c.citations ? { citations: c.citations } : {}),
+    ...(opts.includeProofs && c.chain ? { chain: c.chain } : {}),
   }));
-  
+
   return JSON.stringify(output, null, 2);
 }
 
-function formatAsYAML(containers: Container[], includeCitations: boolean): string {
-  // Simple YAML-like format
+function formatYAML(
+  containers: Container[],
+  opts: { includeCitations: boolean; includeProofs: boolean }
+): string {
+  // Simple YAML formatting (for complex cases, use a library)
   const lines: string[] = [];
-  
+
   for (const container of containers) {
-    lines.push(`- id: ${container.id}`);
-    lines.push(`  type: ${container.type}`);
-    lines.push(`  version: ${container.version}`);
-    lines.push(`  name: ${container.meta.name}`);
-    lines.push(`  data:`);
+    lines.push(\`- id: "\${container.id}"\`);
+    lines.push(\`  type: \${container.type}\`);
+    lines.push(\`  version: \${container.version}\`);
+    lines.push(\`  name: "\${container.meta.name}"\`);
     
-    for (const [key, value] of Object.entries(container.data)) {
-      if (typeof value === "string" || typeof value === "number") {
-        lines.push(`    ${key}: ${value}`);
+    if (container.data) {
+      lines.push(\`  data:\`);
+      formatYAMLData(container.data, lines, 4);
+    }
+
+    if (opts.includeCitations && container.citations?.length) {
+      lines.push(\`  citations:\`);
+      for (const c of container.citations) {
+        lines.push(\`    - document: "\${c.documentId}"\`);
+        if (c.page) lines.push(\`      page: \${c.page}\`);
+        lines.push(\`      confidence: \${c.confidence}\`);
       }
     }
+
     lines.push("");
   }
-  
+
   return lines.join("\n");
+}
+
+function formatYAMLData(data: unknown, lines: string[], indent: number): void {
+  const prefix = " ".repeat(indent);
+
+  if (Array.isArray(data)) {
+    for (const item of data) {
+      if (typeof item === "object" && item !== null) {
+        lines.push(\`\${prefix}-\`);
+        formatYAMLData(item, lines, indent + 2);
+      } else {
+        lines.push(\`\${prefix}- \${item}\`);
+      }
+    }
+  } else if (typeof data === "object" && data !== null) {
+    for (const [key, value] of Object.entries(data)) {
+      if (typeof value === "object" && value !== null) {
+        lines.push(\`\${prefix}\${key}:\`);
+        formatYAMLData(value, lines, indent + 2);
+      } else if (typeof value === "string") {
+        lines.push(\`\${prefix}\${key}: "\${value}"\`);
+      } else {
+        lines.push(\`\${prefix}\${key}: \${value}\`);
+      }
+    }
+  }
 }
