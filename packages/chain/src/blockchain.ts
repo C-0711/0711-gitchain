@@ -1,235 +1,159 @@
-// 0711 Content Chain - Blockchain Service
-// Connects to Base L2 and manages on-chain certifications
+/**
+ * Blockchain service for GitChain
+ * 
+ * Interacts with the deployed ContentChain smart contract.
+ * Contract: 0xAd31465A5618Ffa27eC1f3c0056C2f5CC621aEc7 (Base Mainnet)
+ */
 
-import { ethers } from 'ethers';
-import type { BatchResult } from './merkle';
-import { updateBatchStatus } from './merkle';
+import { ethers } from "ethers";
 
-// ============================================
-// CONTRACT ABI (minimal for our functions)
-// ============================================
-
+// Contract ABI (minimal for our needs)
 const CONTRACT_ABI = [
-  "function certifyBatch(bytes32 _merkleRoot, string calldata _metadataURI, uint256 _itemCount, uint8 _schemaVersion) external returns (uint256)",
-  "function verifyCertification(uint256 _batchId, bytes32 _contentManifestHash, bytes32[] calldata _merkleProof) external view returns (bool)",
-  "function getCertification(uint256 _batchId) external view returns (bytes32, uint256, string, uint256, address)",
-  "function nextBatchId() external view returns (uint256)",
-  "event BatchCertified(uint256 indexed batchId, bytes32 merkleRoot, uint256 itemCount, string metadataURI, address indexed issuer)"
+  "function registerContentBatch(bytes32 merkleRoot, string metadataUri) external returns (uint256 batchId)",
+  "function verifyContent(uint256 batchId, bytes32 contentHash, bytes32[] calldata merkleProof) external view returns (bool)",
+  "function getBatch(uint256 batchId) external view returns (bytes32 merkleRoot, string memory metadataUri, uint256 timestamp, address registrar)",
+  "function batchCount() external view returns (uint256)",
+  "event BatchRegistered(uint256 indexed batchId, bytes32 merkleRoot, string metadataUri, address indexed registrar)",
 ];
 
-// ============================================
-// CONFIGURATION
-// ============================================
+// Contract address on Base Mainnet
+const CONTRACT_ADDRESS = "0xAd31465A5618Ffa27eC1f3c0056C2f5CC621aEc7";
 
-interface BlockchainConfig {
-  rpcUrl: string;
-  contractAddress: string;
-  privateKey: string;
-  network: 'base-sepolia' | 'base-mainnet';
-}
-
-const NETWORKS: Record<string, BlockchainConfig> = {
-  'base-sepolia': {
-    rpcUrl: process.env.BASE_SEPOLIA_RPC || 'https://sepolia.base.org',
-    contractAddress: process.env.CONTENT_CERTIFICATE_ADDRESS_SEPOLIA || '',
-    privateKey: process.env.DEPLOYER_PRIVATE_KEY || '',
-    network: 'base-sepolia',
+// Network configs
+const NETWORKS = {
+  "base-mainnet": {
+    rpc: "https://mainnet.base.org",
+    chainId: 8453,
+    explorer: "https://basescan.org",
   },
-  'base-mainnet': {
-    rpcUrl: process.env.BASE_MAINNET_RPC || 'https://mainnet.base.org',
-    contractAddress: process.env.CONTENT_CERTIFICATE_ADDRESS_MAINNET || '',
-    privateKey: process.env.DEPLOYER_PRIVATE_KEY || '',
-    network: 'base-mainnet',
+  "base-sepolia": {
+    rpc: "https://sepolia.base.org",
+    chainId: 84532,
+    explorer: "https://sepolia.basescan.org",
   },
 };
 
-// ============================================
-// BLOCKCHAIN CLIENT
-// ============================================
+export interface BatchInfo {
+  batchId: number;
+  merkleRoot: string;
+  metadataUri: string;
+  timestamp: Date;
+  registrar: string;
+}
 
 export class BlockchainService {
   private provider: ethers.JsonRpcProvider;
-  private wallet: ethers.Wallet;
   private contract: ethers.Contract;
-  private config: BlockchainConfig;
+  private signer?: ethers.Wallet;
+  private network: string;
 
-  constructor(network?: 'base-sepolia' | 'base-mainnet') {
-    const selectedNetwork = network || (process.env.CONTENT_CERTIFICATE_ADDRESS_MAINNET ? 'base-mainnet' : 'base-sepolia');
-    this.config = NETWORKS[selectedNetwork];
-    
-    if (!this.config.contractAddress) {
-      console.warn(`[Blockchain] Contract not deployed on ${network}`);
+  constructor(network = "base-mainnet", privateKey?: string) {
+    const config = NETWORKS[network as keyof typeof NETWORKS];
+    if (!config) {
+      throw new Error(\`Unknown network: \${network}\`);
     }
+
+    this.network = network;
+    this.provider = new ethers.JsonRpcProvider(config.rpc);
     
-    this.provider = new ethers.JsonRpcProvider(this.config.rpcUrl);
-    this.wallet = new ethers.Wallet(this.config.privateKey || ethers.Wallet.createRandom().privateKey, this.provider);
-    this.contract = new ethers.Contract(
-      this.config.contractAddress || ethers.ZeroAddress,
-      CONTRACT_ABI,
-      this.wallet
+    if (privateKey) {
+      this.signer = new ethers.Wallet(privateKey, this.provider);
+      this.contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, this.signer);
+    } else {
+      this.contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, this.provider);
+    }
+  }
+
+  /**
+   * Register a batch of content hashes
+   */
+  async registerBatch(
+    merkleRoot: string,
+    metadataUri: string
+  ): Promise<{ batchId: number; txHash: string }> {
+    if (!this.signer) {
+      throw new Error("Signer required for write operations");
+    }
+
+    const tx = await this.contract.registerContentBatch(merkleRoot, metadataUri);
+    const receipt = await tx.wait();
+
+    // Find BatchRegistered event
+    const event = receipt.logs.find(
+      (log: any) => log.topics[0] === ethers.id("BatchRegistered(uint256,bytes32,string,address)")
     );
-  }
 
-  // ============================================
-  // STATUS
-  // ============================================
+    const batchId = event ? parseInt(event.topics[1], 16) : 0;
 
-  async isConnected(): Promise<boolean> {
-    try {
-      await this.provider.getBlockNumber();
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  async getStatus(): Promise<{
-    connected: boolean;
-    network: string;
-    contractDeployed: boolean;
-    walletAddress: string;
-    balance: string;
-  }> {
-    const connected = await this.isConnected();
-    let balance = '0';
-    
-    if (connected) {
-      try {
-        const wei = await this.provider.getBalance(this.wallet.address);
-        balance = ethers.formatEther(wei);
-      } catch {}
-    }
-    
     return {
-      connected,
-      network: this.config.network,
-      contractDeployed: !!this.config.contractAddress,
-      walletAddress: this.wallet.address,
-      balance,
+      batchId,
+      txHash: receipt.hash,
     };
   }
 
-  // ============================================
-  // CERTIFICATION
-  // ============================================
-
-  async certifyBatch(batch: BatchResult, metadataURI: string): Promise<{
-    success: boolean;
-    txHash?: string;
-    blockNumber?: number;
-    onChainBatchId?: number;
-    error?: string;
-  }> {
-    if (!this.config.contractAddress) {
-      return { success: false, error: 'Contract not deployed' };
-    }
-
-    try {
-      // Convert merkle root to bytes32
-      const merkleRootBytes = '0x' + batch.merkleRoot;
-      
-      // Call contract
-      const tx = await this.contract.certifyBatch(
-        merkleRootBytes,
-        metadataURI,
-        batch.itemCount,
-        1 // schemaVersion
-      );
-      
-      console.log(`[Blockchain] Tx submitted: ${tx.hash}`);
-      
-      // Wait for confirmation
-      const receipt = await tx.wait();
-      
-      // Parse event to get on-chain batch ID
-      const event = receipt.logs.find((log: any) => {
-        try {
-          const parsed = this.contract.interface.parseLog(log);
-          return parsed?.name === 'BatchCertified';
-        } catch {
-          return false;
-        }
-      });
-      
-      let onChainBatchId: number | undefined;
-      if (event) {
-        const parsed = this.contract.interface.parseLog(event);
-        onChainBatchId = Number(parsed?.args[0]);
-      }
-      
-      // Update local batch status
-      updateBatchStatus(batch.batchId, 'confirmed', tx.hash, receipt.blockNumber, metadataURI);
-      
-      return {
-        success: true,
-        txHash: tx.hash,
-        blockNumber: receipt.blockNumber,
-        onChainBatchId,
-      };
-      
-    } catch (error) {
-      console.error('[Blockchain] Certification error:', error);
-      updateBatchStatus(batch.batchId, 'failed');
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
-  }
-
-  async verifyCertification(
+  /**
+   * Verify content against a batch
+   */
+  async verifyContent(
     batchId: number,
-    manifestHash: string,
-    proof: string[]
+    contentHash: string,
+    merkleProof: string[]
   ): Promise<boolean> {
-    if (!this.config.contractAddress) {
-      throw new Error('Contract not deployed');
-    }
-
-    const manifestHashBytes = '0x' + manifestHash;
-    const proofBytes = proof.map(p => '0x' + p);
-    
-    return this.contract.verifyCertification(batchId, manifestHashBytes, proofBytes);
+    return this.contract.verifyContent(batchId, contentHash, merkleProof);
   }
 
-  async getCertification(batchId: number): Promise<{
-    merkleRoot: string;
-    timestamp: number;
-    metadataURI: string;
-    itemCount: number;
-    issuer: string;
-  } | null> {
-    if (!this.config.contractAddress) {
-      return null;
-    }
-
+  /**
+   * Get batch information
+   */
+  async getBatch(batchId: number): Promise<BatchInfo | null> {
     try {
-      const result = await this.contract.getCertification(batchId);
+      const [merkleRoot, metadataUri, timestamp, registrar] = await this.contract.getBatch(batchId);
+      
       return {
-        merkleRoot: result[0].slice(2), // Remove 0x prefix
-        timestamp: Number(result[1]),
-        metadataURI: result[2],
-        itemCount: Number(result[3]),
-        issuer: result[4],
+        batchId,
+        merkleRoot,
+        metadataUri,
+        timestamp: new Date(Number(timestamp) * 1000),
+        registrar,
       };
     } catch {
       return null;
     }
   }
-}
 
-// ============================================
-// SINGLETON INSTANCE
-// ============================================
-
-let blockchainService: BlockchainService | null = null;
-
-export function getBlockchainService(network?: 'base-sepolia' | 'base-mainnet'): BlockchainService {
-  if (!blockchainService) {
-    blockchainService = new BlockchainService(network);
+  /**
+   * Get total batch count
+   */
+  async getBatchCount(): Promise<number> {
+    const count = await this.contract.batchCount();
+    return Number(count);
   }
-  return blockchainService;
+
+  /**
+   * Get explorer URL for transaction
+   */
+  getExplorerUrl(txHash: string): string {
+    const config = NETWORKS[this.network as keyof typeof NETWORKS];
+    return \`\${config.explorer}/tx/\${txHash}\`;
+  }
+
+  /**
+   * Get contract address
+   */
+  getContractAddress(): string {
+    return CONTRACT_ADDRESS;
+  }
 }
 
-// Export for direct use
-export { NETWORKS };
+// Singleton instance
+let defaultService: BlockchainService | null = null;
+
+export function getBlockchainService(
+  network = "base-mainnet",
+  privateKey?: string
+): BlockchainService {
+  if (!defaultService || privateKey) {
+    defaultService = new BlockchainService(network, privateKey);
+  }
+  return defaultService;
+}

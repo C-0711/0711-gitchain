@@ -1,236 +1,146 @@
-// 0711 Content Chain - Merkle Tree Engine
-// Batches manifests into a Merkle tree for efficient blockchain certification
+/**
+ * Merkle tree implementation for content batching
+ */
 
-import { createHash } from 'crypto';
-import { certificationQueue, proofStore, hashManifest } from './service';
-import type { ContentManifest, CertificationBatch, MerkleProof } from './types';
-
-// ============================================
-// MERKLE TREE IMPLEMENTATION
-// ============================================
-
-export function sha256(data: string): string {
-  return createHash('sha256').update(data).digest('hex');
-}
-
-export function hashPair(left: string, right: string): string {
-  // Sort to ensure deterministic ordering
-  const [a, b] = [left, right].sort();
-  return sha256(a + b);
-}
+import { ethers } from "ethers";
 
 export interface MerkleTreeResult {
   root: string;
   leaves: string[];
-  layers: string[][];
-  proofs: Map<string, string[]>;
+  tree: string[][];
 }
 
-export function buildMerkleTree(leaves: string[]): MerkleTreeResult {
-  if (leaves.length === 0) {
-    return { root: '', leaves: [], layers: [], proofs: new Map() };
+export interface MerkleProof {
+  leaf: string;
+  proof: string[];
+  index: number;
+}
+
+export interface BatchResult {
+  merkleRoot: string;
+  contentHashes: string[];
+  proofs: Map<string, MerkleProof>;
+  metadataUri: string;
+}
+
+/**
+ * Hash content to create a leaf
+ */
+export function hashContent(content: unknown): string {
+  const json = JSON.stringify(content, Object.keys(content as object).sort());
+  return ethers.keccak256(ethers.toUtf8Bytes(json));
+}
+
+/**
+ * Build a Merkle tree from content hashes
+ */
+export function buildMerkleTree(contentHashes: string[]): MerkleTreeResult {
+  if (contentHashes.length === 0) {
+    throw new Error("Cannot build Merkle tree from empty array");
   }
 
-  // Ensure even number of leaves (duplicate last if odd)
-  const paddedLeaves = [...leaves];
-  if (paddedLeaves.length % 2 === 1) {
-    paddedLeaves.push(paddedLeaves[paddedLeaves.length - 1]);
-  }
+  // Sort hashes for deterministic tree
+  const leaves = [...contentHashes].sort();
+  const tree: string[][] = [leaves];
 
-  const layers: string[][] = [paddedLeaves];
-  let currentLayer = paddedLeaves;
-
-  // Build tree layers
-  while (currentLayer.length > 1) {
-    const nextLayer: string[] = [];
-    for (let i = 0; i < currentLayer.length; i += 2) {
-      const left = currentLayer[i];
-      const right = currentLayer[i + 1] || left;
-      nextLayer.push(hashPair(left, right));
+  // Build tree bottom-up
+  let currentLevel = leaves;
+  while (currentLevel.length > 1) {
+    const nextLevel: string[] = [];
+    
+    for (let i = 0; i < currentLevel.length; i += 2) {
+      const left = currentLevel[i];
+      const right = currentLevel[i + 1] || left; // Duplicate last if odd
+      
+      const combined = left < right
+        ? ethers.keccak256(ethers.concat([left, right]))
+        : ethers.keccak256(ethers.concat([right, left]));
+      
+      nextLevel.push(combined);
     }
-    layers.push(nextLayer);
-    currentLayer = nextLayer;
+    
+    tree.push(nextLevel);
+    currentLevel = nextLevel;
   }
 
-  const root = currentLayer[0];
-
-  // Generate proofs for each leaf
-  const proofs = new Map<string, string[]>();
-  for (let i = 0; i < leaves.length; i++) {
-    proofs.set(leaves[i], generateProof(layers, i));
-  }
-
-  return { root, leaves, layers, proofs };
+  return {
+    root: tree[tree.length - 1][0],
+    leaves,
+    tree,
+  };
 }
 
-function generateProof(layers: string[][], leafIndex: number): string[] {
+/**
+ * Generate Merkle proof for a specific leaf
+ */
+export function generateProof(tree: MerkleTreeResult, leafHash: string): MerkleProof {
+  const index = tree.leaves.indexOf(leafHash);
+  if (index === -1) {
+    throw new Error("Leaf not found in tree");
+  }
+
   const proof: string[] = [];
-  let index = leafIndex;
+  let currentIndex = index;
 
-  for (let i = 0; i < layers.length - 1; i++) {
-    const layer = layers[i];
-    const isLeft = index % 2 === 0;
-    const siblingIndex = isLeft ? index + 1 : index - 1;
+  for (let level = 0; level < tree.tree.length - 1; level++) {
+    const levelHashes = tree.tree[level];
+    const isRightNode = currentIndex % 2 === 1;
+    const siblingIndex = isRightNode ? currentIndex - 1 : currentIndex + 1;
 
-    if (siblingIndex < layer.length) {
-      proof.push(layer[siblingIndex]);
+    if (siblingIndex < levelHashes.length) {
+      proof.push(levelHashes[siblingIndex]);
     }
 
-    index = Math.floor(index / 2);
+    currentIndex = Math.floor(currentIndex / 2);
   }
 
-  return proof;
+  return { leaf: leafHash, proof, index };
 }
 
-export function verifyProof(leaf: string, proof: string[], root: string): boolean {
+/**
+ * Verify a Merkle proof
+ */
+export function verifyProof(
+  root: string,
+  leaf: string,
+  proof: string[],
+  index: number
+): boolean {
   let hash = leaf;
+  let currentIndex = index;
 
   for (const sibling of proof) {
-    hash = hashPair(hash, sibling);
+    const isRightNode = currentIndex % 2 === 1;
+    
+    hash = isRightNode
+      ? ethers.keccak256(ethers.concat([sibling, hash]))
+      : ethers.keccak256(ethers.concat([hash, sibling]));
+    
+    currentIndex = Math.floor(currentIndex / 2);
   }
 
   return hash === root;
 }
 
-// ============================================
-// BATCH CERTIFICATION
-// ============================================
+/**
+ * Create a batch from containers
+ */
+export function createBatch(
+  containers: { id: string; data: unknown }[],
+  metadataUri: string
+): BatchResult {
+  const contentHashes = containers.map((c) => hashContent(c.data));
+  const tree = buildMerkleTree(contentHashes);
 
-let batchCounter = 0;
-const batches: Map<number, CertificationBatch> = new Map();
-
-export interface BatchResult {
-  batchId: number;
-  merkleRoot: string;
-  itemCount: number;
-  manifests: ContentManifest[];
-  proofs: Map<string, MerkleProof>;
-}
-
-export function createBatch(): BatchResult | null {
-  const manifests = Array.from(certificationQueue.values());
-  
-  if (manifests.length === 0) {
-    return null;
+  const proofs = new Map<string, MerkleProof>();
+  for (let i = 0; i < containers.length; i++) {
+    proofs.set(containers[i].id, generateProof(tree, contentHashes[i]));
   }
-
-  // Hash each manifest
-  const manifestHashes: string[] = [];
-  const hashToManifest = new Map<string, ContentManifest>();
-  
-  for (const manifest of manifests) {
-    const hash = hashManifest(manifest);
-    manifestHashes.push(hash);
-    hashToManifest.set(hash, manifest);
-  }
-
-  // Build Merkle tree
-  const tree = buildMerkleTree(manifestHashes);
-  
-  // Create batch record
-  const batchId = ++batchCounter;
-  const batch: CertificationBatch = {
-    batchId,
-    merkleRoot: tree.root,
-    itemCount: manifests.length,
-    network: 'base-sepolia',
-    createdAt: new Date().toISOString(),
-    status: 'pending',
-  };
-  batches.set(batchId, batch);
-
-  // Store proofs
-  const batchProofs = new Map<string, MerkleProof>();
-  let index = 0;
-  for (const [manifestHash, proof] of tree.proofs.entries()) {
-    const merkleProof: MerkleProof = {
-      contentHash: hashToManifest.get(manifestHash)?.contentHash || '',
-      manifestHash,
-      proof,
-      batchId,
-      index: index++,
-    };
-    proofStore.set(manifestHash, merkleProof);
-    batchProofs.set(manifestHash, merkleProof);
-  }
-
-  // Clear the queue
-  certificationQueue.clear();
 
   return {
-    batchId,
     merkleRoot: tree.root,
-    itemCount: manifests.length,
-    manifests,
-    proofs: batchProofs,
+    contentHashes,
+    proofs,
+    metadataUri,
   };
 }
-
-// ============================================
-// BATCH MANAGEMENT
-// ============================================
-
-export function getBatch(batchId: number): CertificationBatch | undefined {
-  return batches.get(batchId);
-}
-
-export function getAllBatches(): CertificationBatch[] {
-  return Array.from(batches.values());
-}
-
-export function updateBatchStatus(
-  batchId: number, 
-  status: CertificationBatch['status'],
-  txHash?: string,
-  blockNumber?: number,
-  ipfsCid?: string
-): void {
-  const batch = batches.get(batchId);
-  if (batch) {
-    batch.status = status;
-    if (txHash) batch.txHash = txHash;
-    if (blockNumber) batch.blockNumber = blockNumber;
-    if (ipfsCid) batch.ipfsCid = ipfsCid;
-  }
-}
-
-export function getProof(manifestHash: string): MerkleProof | undefined {
-  return proofStore.get(manifestHash);
-}
-
-// ============================================
-// AUTO-BATCHING (Timer-based)
-// ============================================
-
-let batchTimer: NodeJS.Timeout | null = null;
-const BATCH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-const MIN_BATCH_SIZE = 1;
-
-export function startAutoBatching(
-  onBatch: (result: BatchResult) => Promise<void>
-): void {
-  if (batchTimer) return;
-  
-  batchTimer = setInterval(async () => {
-    if (certificationQueue.size >= MIN_BATCH_SIZE) {
-      const result = createBatch();
-      if (result) {
-        console.log(`[Merkle] Auto-batch created: ${result.batchId} with ${result.itemCount} items`);
-        await onBatch(result);
-      }
-    }
-  }, BATCH_INTERVAL_MS);
-  
-  console.log('[Merkle] Auto-batching started (5 min interval)');
-}
-
-export function stopAutoBatching(): void {
-  if (batchTimer) {
-    clearInterval(batchTimer);
-    batchTimer = null;
-    console.log('[Merkle] Auto-batching stopped');
-  }
-}
-
-// Export for testing
-export { batches };

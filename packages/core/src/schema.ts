@@ -1,116 +1,110 @@
 /**
- * Container schema validation using Zod
+ * Zod schema definitions for GitChain containers
  */
 
 import { z } from "zod";
 
-// Container types enum
+// Container types
 export const ContainerTypeSchema = z.enum([
   "product",
-  "campaign", 
+  "campaign",
   "project",
   "memory",
-  "knowledge"
+  "knowledge",
 ]);
+
+export type ContainerType = z.infer<typeof ContainerTypeSchema>;
 
 // Citation schema
 export const CitationSchema = z.object({
-  featureCode: z.string().optional(),
-  documentId: z.string(),
-  documentType: z.string().optional(),
-  page: z.number().optional(),
+  documentId: z.string().min(1),
+  page: z.number().int().positive().optional(),
   quote: z.string().optional(),
-  confidence: z.enum(["confirmed", "likely", "conflict", "not_found"]),
-  auditedAt: z.string().optional(),
-  auditedBy: z.string().optional(),
+  confidence: z.enum(["confirmed", "likely", "inferred"]),
 });
 
-// Media reference schema
-export const MediaRefSchema = z.object({
-  type: z.enum(["image", "document", "video", "cad"]),
-  filename: z.string(),
-  url: z.string().optional(),
-  ipfsCid: z.string().optional(),
+export type Citation = z.infer<typeof CitationSchema>;
+
+// Media schema
+export const MediaSchema = z.object({
+  url: z.string().url(),
+  type: z.string(),
+  name: z.string().optional(),
+  size: z.number().optional(),
   hash: z.string().optional(),
-  mimeType: z.string().optional(),
 });
 
-// Git info schema
+export type Media = z.infer<typeof MediaSchema>;
+
+// Container metadata
+export const ContainerMetaSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  author: z.string(),
+  tags: z.array(z.string()).optional(),
+});
+
+export type ContainerMeta = z.infer<typeof ContainerMetaSchema>;
+
+// Chain proof
+export const ChainProofSchema = z.object({
+  network: z.string(),
+  batchId: z.number().int(),
+  txHash: z.string().optional(),
+  blockNumber: z.number().int().optional(),
+  merkleRoot: z.string().optional(),
+  merkleProof: z.array(z.string()).optional(),
+});
+
+export type ChainProof = z.infer<typeof ChainProofSchema>;
+
+// Git info
 export const GitInfoSchema = z.object({
   repository: z.string(),
   branch: z.string(),
   commit: z.string(),
   commitMessage: z.string().optional(),
-  commitAt: z.string(),
+  commitAt: z.string().datetime(),
 });
 
-// Chain proof schema
-export const ChainProofSchema = z.object({
-  network: z.string(),
-  contractAddress: z.string(),
-  batchId: z.number(),
-  merkleRoot: z.string(),
-  merkleProof: z.array(z.string()),
-  txHash: z.string().optional(),
-  blockNumber: z.number().optional(),
-  timestamp: z.string().optional(),
-});
+export type GitInfo = z.infer<typeof GitInfoSchema>;
 
-// Container metadata schema
-export const ContainerMetaSchema = z.object({
-  name: z.string(),
-  description: z.string().optional(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  author: z.string(),
-  schema: z.string().optional(),
-  tags: z.array(z.string()).optional(),
-});
-
-// Base container schema
+// Full container schema
 export const ContainerSchema = z.object({
-  id: z.string(),
+  id: z.string().regex(/^0711:[a-z]+:[a-z0-9-]+:[a-zA-Z0-9-]+:(v\d+|latest)$/),
   type: ContainerTypeSchema,
-  namespace: z.string(),
-  identifier: z.string(),
-  version: z.number(),
+  namespace: z.string().min(1),
+  identifier: z.string().min(1),
+  version: z.number().int().positive(),
   meta: ContainerMetaSchema,
   data: z.record(z.unknown()),
   citations: z.array(CitationSchema).optional(),
-  media: z.array(MediaRefSchema).optional(),
-  git: GitInfoSchema.optional(),
+  media: z.array(MediaSchema).optional(),
   chain: ChainProofSchema.optional(),
+  git: GitInfoSchema.optional(),
 });
 
-// Product feature schema
-export const ProductFeatureSchema = z.object({
-  code: z.string(),
-  name: z.string(),
-  value: z.union([z.string(), z.number(), z.boolean(), z.null()]),
-  unit: z.string().optional(),
-  source: z.string().optional(),
-  confidence: z.string().optional(),
-});
+export type Container = z.infer<typeof ContainerSchema>;
 
-// Product container schema
-export const ProductContainerSchema = ContainerSchema.extend({
-  type: z.literal("product"),
-  data: z.object({
-    supplierPid: z.string(),
-    name: z.string(),
-    descriptionShort: z.string().optional(),
-    descriptionLong: z.string().optional(),
-    productLine: z.string().optional(),
-    etimClass: z.string().optional(),
-    features: z.array(ProductFeatureSchema),
-  }),
-});
+// Container ID format: 0711:{type}:{namespace}:{identifier}:{version}
+export const ContainerIdSchema = z.string().regex(
+  /^0711:(product|campaign|project|memory|knowledge):[a-z0-9-]+:[a-zA-Z0-9-]+:(v\d+|latest)$/,
+  "Invalid container ID format. Expected: 0711:{type}:{namespace}:{identifier}:{version}"
+);
 
-// Validation helpers
-export function validateContainer(data: unknown) {
+// Validate a container
+export function validateContainer(data: unknown): Container {
+  return ContainerSchema.parse(data);
+}
+
+// Safely validate (returns result object)
+export function safeValidateContainer(data: unknown): z.SafeParseReturnType<unknown, Container> {
   return ContainerSchema.safeParse(data);
 }
 
-export function validateProductContainer(data: unknown) {
-  return ProductContainerSchema.safeParse(data);
+// Validate container ID
+export function validateContainerId(id: string): boolean {
+  return ContainerIdSchema.safeParse(id).success;
 }
