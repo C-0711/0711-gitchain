@@ -10,6 +10,11 @@ import helmet from "helmet";
 import { createSchema, createYoga } from "graphql-yoga";
 import { inject } from "@0711/inject";
 
+// Route imports
+import containersRouter from "./routes/containers";
+import verifyRouter from "./routes/verify";
+import namespacesRouter from "./routes/namespaces";
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -28,7 +33,12 @@ app.get("/health", (req, res) => {
   });
 });
 
-// REST: Inject context
+// REST Routes
+app.use("/api/containers", containersRouter);
+app.use("/api/verify", verifyRouter);
+app.use("/api/namespaces", namespacesRouter);
+
+// REST: Inject context (main API)
 app.post("/api/inject", async (req, res) => {
   try {
     const { containers, verify, format, includeCitations } = req.body;
@@ -53,43 +63,20 @@ app.post("/api/inject", async (req, res) => {
   }
 });
 
-// REST: Get container
-app.get("/api/containers/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const context = await inject({
-      containers: [decodeURIComponent(id)],
-      verify: true,
-      format: "json",
-    });
-
-    if (context.containers.length === 0) {
-      return res.status(404).json({ error: "Container not found" });
-    }
-
-    res.json(context.containers[0]);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// REST: Verify hash
-app.get("/api/verify/:hash", async (req, res) => {
-  // TODO: Implement hash verification against blockchain
-  res.json({
-    hash: req.params.hash,
-    verified: false,
-    message: "Verification endpoint coming soon",
-  });
-});
-
 // GraphQL schema
 const schema = createSchema({
-  typeDefs: /* GraphQL */ `
+  typeDefs: /* GraphQL */ \`
     type Query {
       container(id: ID!): Container
-      containers(ids: [ID!]!): [Container!]!
+      containers(ids: [ID!]!, type: String, namespace: String): [Container!]!
       inject(input: InjectInput!): InjectedContext!
+      namespaces(type: String): [Namespace!]!
+    }
+
+    type Mutation {
+      createContainer(input: CreateContainerInput!): ContainerResult!
+      updateContainer(id: ID!, input: UpdateContainerInput!): ContainerResult!
+      createNamespace(type: String!, namespace: String!): NamespaceResult!
     }
 
     type Container {
@@ -101,6 +88,8 @@ const schema = createSchema({
       meta: ContainerMeta!
       data: JSON
       citations: [Citation!]
+      chain: ChainProof
+      git: GitInfo
     }
 
     type ContainerMeta {
@@ -109,6 +98,7 @@ const schema = createSchema({
       createdAt: String!
       updatedAt: String!
       author: String!
+      tags: [String!]
     }
 
     type Citation {
@@ -118,12 +108,48 @@ const schema = createSchema({
       confidence: String!
     }
 
+    type ChainProof {
+      network: String!
+      batchId: Int!
+      txHash: String
+      blockNumber: Int
+    }
+
+    type GitInfo {
+      repository: String!
+      branch: String!
+      commit: String!
+      commitMessage: String
+      commitAt: String!
+    }
+
     type InjectedContext {
       containers: [Container!]!
+      citations: [Citation!]!
       formatted: String!
       tokenCount: Int!
       verified: Boolean!
       verifiedAt: String!
+    }
+
+    type Namespace {
+      name: String!
+      type: String!
+      containerCount: Int!
+      createdAt: String!
+    }
+
+    type ContainerResult {
+      id: ID!
+      version: Int!
+      commitHash: String!
+      message: String!
+    }
+
+    type NamespaceResult {
+      type: String!
+      namespace: String!
+      message: String!
     }
 
     input InjectInput {
@@ -133,8 +159,29 @@ const schema = createSchema({
       includeCitations: Boolean
     }
 
+    input CreateContainerInput {
+      type: String!
+      namespace: String!
+      identifier: String!
+      data: JSON!
+      meta: ContainerMetaInput
+    }
+
+    input UpdateContainerInput {
+      data: JSON
+      meta: ContainerMetaInput
+      message: String
+    }
+
+    input ContainerMetaInput {
+      name: String
+      description: String
+      author: String
+      tags: [String!]
+    }
+
     scalar JSON
-  `,
+  \`,
   resolvers: {
     Query: {
       container: async (_, { id }) => {
@@ -161,6 +208,38 @@ const schema = createSchema({
           includeCitations: input.includeCitations !== false,
         });
       },
+      namespaces: async () => {
+        // TODO: Implement namespace listing
+        return [];
+      },
+    },
+    Mutation: {
+      createContainer: async (_, { input }) => {
+        // TODO: Implement container creation
+        return {
+          id: "0711:product:test:test:v1",
+          version: 1,
+          commitHash: "abc123",
+          message: "Container created",
+        };
+      },
+      updateContainer: async (_, { id, input }) => {
+        // TODO: Implement container update
+        return {
+          id,
+          version: 2,
+          commitHash: "def456",
+          message: "Container updated",
+        };
+      },
+      createNamespace: async (_, { type, namespace }) => {
+        // TODO: Implement namespace creation
+        return {
+          type,
+          namespace,
+          message: "Namespace created",
+        };
+      },
     },
   },
 });
@@ -171,8 +250,8 @@ app.use("/graphql", yoga);
 
 // Start server
 app.listen(PORT, () => {
-  console.log(\`🚀 GitChain API running on port \${PORT}\`);
-  console.log(\`   REST: http://localhost:\${PORT}/api\`);
-  console.log(\`   GraphQL: http://localhost:\${PORT}/graphql\`);
-  console.log(\`   Health: http://localhost:\${PORT}/health\`);
+  console.log(\`GitChain API running on port \${PORT}\`);
+  console.log(\`  REST:    http://localhost:\${PORT}/api\`);
+  console.log(\`  GraphQL: http://localhost:\${PORT}/graphql\`);
+  console.log(\`  Health:  http://localhost:\${PORT}/health\`);
 });
