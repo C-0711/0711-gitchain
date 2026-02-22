@@ -1,0 +1,22 @@
+{
+  "name": "@0711/gitchain-cli",
+  "version": "0.1.0",
+  "description": "GitChain CLI - Blockchain-verified context injection",
+  "type": "module",
+  "bin": {
+    "gitchain": "./dist/gitchain.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx gitchain.ts"
+  },
+  "dependencies": {
+    "@0711/core": "workspace:*",
+    "@0711/inject": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "@types/node": "^20.0.0",
+    "tsx": "^4.7.0"
+  }
+}
