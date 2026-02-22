@@ -4,6 +4,13 @@
   "description": "Blockchain anchoring and Merkle tree engine for GitChain",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc -w",
@@ -11,11 +18,13 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "ethers": "^6.11.0",
-    "@0711/core": "workspace:*"
+    "ethers": "^6.11.0"
   },
   "devDependencies": {
     "typescript": "^5.3.0",
     "@types/node": "^20.0.0"
+  },
+  "peerDependencies": {
+    "@0711/core": "workspace:*"
   }
 }

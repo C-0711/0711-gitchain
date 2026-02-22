@@ -1,10 +1,16 @@
 {
-  "name": "@0711/git",
+  "name": "@0711/sdk",
   "version": "0.1.0",
-  "description": "Git versioning layer for GitChain containers",
+  "description": "GitChain SDK for TypeScript/JavaScript",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc -w",
@@ -12,13 +18,10 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "isomorphic-git": "^1.27.0"
+    "@0711/core": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.3.0",
     "@types/node": "^20.0.0"
-  },
-  "peerDependencies": {
-    "@0711/core": "workspace:*"
   }
 }
