@@ -33,3 +33,7 @@ __all__ = [
     "Citation",
     "ChainProof",
 ]
+
+# Re-export integrations
+from .langchain import get_gitchain_tools, GitChainRetriever
+from .openai import GITCHAIN_FUNCTIONS, GitChainFunctionHandler, create_system_prompt
