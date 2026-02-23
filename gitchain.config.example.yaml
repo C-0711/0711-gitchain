@@ -1,0 +1,135 @@
+# GitChain Configuration
+# Copy to gitchain.config.yaml and customize
+
+version: "1.0"
+
+# ===========================================
+# STORAGE — Where container files are stored
+# ===========================================
+storage:
+  # Options: 0711-storage | s3 | minio | local | ipfs
+  type: "0711-storage"
+  endpoint: "http://vault-storage:9510"
+  bucket: "gitchain-containers"
+  
+  # For S3/MinIO
+  # accessKey: "${AWS_ACCESS_KEY_ID}"
+  # secretKey: "${AWS_SECRET_ACCESS_KEY}"
+  # region: "eu-central-1"
+  
+  # Presigned URLs for direct browser upload/download
+  presign: true
+  presignExpiry: 3600  # 1 hour
+
+# ===========================================
+# DATABASE — Container metadata storage
+# ===========================================
+database:
+  # Options: postgresql | sqlite | mongodb
+  type: "postgresql"
+  url: "${DATABASE_URL}"
+  pool:
+    min: 5
+    max: 20
+
+# ===========================================
+# CHAIN — Blockchain anchoring
+# ===========================================
+chain:
+  # Options: base | ethereum | polygon | solana | none
+  type: "base"
+  network: "mainnet"  # mainnet | testnet | local
+  rpc: "https://mainnet.base.org"
+  contract: "0xAd31465A5618Ffa27eC1f3c0056C2f5CC621aEc7"
+  
+  # Wallet for write operations (optional)
+  privateKey: "${CHAIN_PRIVATE_KEY}"
+  
+  # Batching: group multiple containers before anchoring
+  batchSize: 100
+  batchIntervalMs: 60000  # 1 minute
+
+# ===========================================
+# MCP — Model Context Protocol Integration
+# ===========================================
+mcp:
+  # Server mode: GitChain exposes MCP tools
+  server:
+    enabled: true
+    transport: "http"  # stdio | http | ws
+    port: 3200
+    # Exposed tools
+    tools:
+      - inject
+      - verify
+      - containers.get
+      - containers.list
+      - containers.create
+      - containers.update
+      - search
+      - namespaces.list
+
+  # Client mode: Connect to external MCPs
+  clients:
+    # Example: Bosch Product MCP
+    - name: "bosch-products"
+      type: "http"
+      url: "http://localhost:3333/mcp"
+      # Auto-sync products from MCP to GitChain
+      sync:
+        enabled: true
+        interval: "1h"
+        containerType: "product"
+        namespace: "bosch"
+        # Map MCP resource fields to container fields
+        mapping:
+          name: "$.name"
+          description: "$.description"
+          specs: "$.technical_specifications"
+          features: "$.features"
+
+    # Example: Knowledge base MCP (stdio)
+    # - name: "vault-knowledge"
+    #   type: "stdio"
+    #   command: ["node", "./mcp-servers/vault-mcp.js"]
+    #   sync:
+    #     enabled: false
+
+# ===========================================
+# PROCESSING — Content processing options
+# ===========================================
+processing:
+  # PDF extraction
+  pdf:
+    enabled: true
+    ocr: true
+    provider: "pixtral"  # pixtral | tesseract | none
+
+  # Image processing
+  images:
+    thumbnails: true
+    sizes: [128, 256, 512]
+    formats: ["webp", "jpg"]
+
+  # Embeddings for semantic search
+  embeddings:
+    enabled: true
+    provider: "openai"  # openai | ollama | none
+    model: "text-embedding-3-small"
+    dimensions: 1536
+
+# ===========================================
+# CACHE — Response caching
+# ===========================================
+cache:
+  type: "redis"  # redis | memory | none
+  url: "${REDIS_URL}"
+  ttl: 3600  # 1 hour
+
+# ===========================================
+# AUTH — API authentication
+# ===========================================
+auth:
+  type: "api-key"  # api-key | jwt | oauth | none
+  prefix: "gc_"
+  hashAlgorithm: "sha256"

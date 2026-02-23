@@ -8,6 +8,7 @@ export default function Footer() {
           <div>
             <h3 className="text-sm font-semibold text-white mb-3">Product</h3>
             <ul className="space-y-2 text-sm text-gray-400">
+              <li><Link href="/explore" className="hover:text-white transition">Explore</Link></li>
               <li><Link href="/containers" className="hover:text-white transition">Containers</Link></li>
               <li><Link href="/inject" className="hover:text-white transition">Inject API</Link></li>
               <li><Link href="/verify" className="hover:text-white transition">Verification</Link></li>
@@ -17,9 +18,10 @@ export default function Footer() {
           <div>
             <h3 className="text-sm font-semibold text-white mb-3">Developers</h3>
             <ul className="space-y-2 text-sm text-gray-400">
+              <li><Link href="/api-reference" className="hover:text-white transition">API Reference</Link></li>
               <li><Link href="/docs/typescript-sdk" className="hover:text-white transition">TypeScript SDK</Link></li>
               <li><Link href="/docs/python-sdk" className="hover:text-white transition">Python SDK</Link></li>
-              <li><Link href="/docs/inject-api" className="hover:text-white transition">API Reference</Link></li>
+              <li><Link href="/docs/inject-api" className="hover:text-white transition">Inject API Docs</Link></li>
               <li><a href="https://github.com/C-0711/0711-gitchain" target="_blank" rel="noopener" className="hover:text-white transition">GitHub</a></li>
             </ul>
           </div>
@@ -37,8 +39,8 @@ export default function Footer() {
             <ul className="space-y-2 text-sm text-gray-400">
               <li><a href="https://0711.io" target="_blank" rel="noopener" className="hover:text-white transition">About 0711</a></li>
               <li><a href="mailto:hello@0711.io" className="hover:text-white transition">Contact</a></li>
-              <li><Link href="/privacy" className="hover:text-white transition">Privacy</Link></li>
-              <li><Link href="/terms" className="hover:text-white transition">Terms</Link></li>
+              <li><Link href="/privacy" className="hover:text-white transition">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="hover:text-white transition">Terms of Service</Link></li>
             </ul>
           </div>
         </div>

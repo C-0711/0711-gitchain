@@ -10,6 +10,7 @@ export default function Navbar() {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const navItems = [
+    { href: "/explore", label: "Explore" },
     { href: "/dashboard", label: "Dashboard" },
     { href: "/containers", label: "Containers" },
     { href: "/namespaces", label: "Namespaces" },
@@ -143,6 +144,12 @@ export default function Navbar() {
                     <div className="text-sm text-gray-400">demo@example.com</div>
                   </div>
                   <Link
+                    href="/profile"
+                    className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-700"
+                  >
+                    <span>👤</span> Your profile
+                  </Link>
+                  <Link
                     href="/dashboard"
                     className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-700"
                   >
@@ -159,6 +166,12 @@ export default function Navbar() {
                     className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-700"
                   >
                     <span>📁</span> Your namespaces
+                  </Link>
+                  <Link
+                    href="/history"
+                    className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-700"
+                  >
+                    <span>📜</span> Activity history
                   </Link>
                   <hr className="my-1 border-gray-700" />
                   <Link

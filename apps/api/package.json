@@ -11,21 +11,27 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@0711/chain": "workspace:*",
     "@0711/core": "workspace:*",
     "@0711/git": "workspace:*",
-    "@0711/chain": "workspace:*",
     "@0711/inject": "workspace:*",
-    "express": "^4.18.0",
-    "cors": "^2.8.5",
-    "helmet": "^7.1.0",
     "@graphql-yoga/node": "^3.0.0",
-    "graphql": "^16.8.0"
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "express": "^4.18.0",
+    "graphql": "^16.8.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.18.0"
   },
   "devDependencies": {
-    "typescript": "^5.3.0",
-    "@types/node": "^20.0.0",
-    "@types/express": "^4.17.0",
+    "@types/bcryptjs": "^3.0.0",
     "@types/cors": "^2.8.0",
-    "tsx": "^4.7.0"
+    "@types/express": "^4.17.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.16.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
   }
 }
