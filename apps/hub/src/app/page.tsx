@@ -272,10 +272,28 @@ export default function GitChainHome() {
         .fade-d4 { animation-delay: 0.4s }
       `}</style>
 
+      {/* ── NAVBAR ── */}
+      <nav style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 50, backgroundColor: "transparent" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "16px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", color: t.heroFg }}>
+            <Ic.Chain s={22} c={t.heroFg} />
+            <span style={{ fontWeight: 600, fontSize: 16, letterSpacing: "-0.01em" }}>GitChain</span>
+          </a>
+          <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+            <a href="/explore" style={{ color: t.heroMuted, textDecoration: "none", fontSize: 14, fontWeight: 500 }}>Explore</a>
+            <a href="/docs" style={{ color: t.heroMuted, textDecoration: "none", fontSize: 14, fontWeight: 500 }}>Docs</a>
+            <a href="/inject" style={{ color: t.heroMuted, textDecoration: "none", fontSize: 14, fontWeight: 500 }}>Inject API</a>
+            <a href="https://github.com/C-0711/0711-gitchain" target="_blank" rel="noopener" style={{ color: t.heroMuted, textDecoration: "none", fontSize: 14, fontWeight: 500 }}>GitHub</a>
+            <a href="/auth/login" style={{ color: t.heroMuted, textDecoration: "none", fontSize: 14, fontWeight: 500 }}>Sign in</a>
+            <a href="/auth/register" style={{ backgroundColor: t.heroAccent, color: "#fff", textDecoration: "none", padding: "8px 16px", borderRadius: 6, fontSize: 14, fontWeight: 600 }}>Get started</a>
+          </div>
+        </div>
+      </nav>
+
       {/* ── HERO ── */}
       <section style={{ backgroundColor: t.heroBg, color: t.heroFg, position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, opacity: 0.03, backgroundImage: `linear-gradient(${t.heroFg} 1px, transparent 1px), linear-gradient(90deg, ${t.heroFg} 1px, transparent 1px)`, backgroundSize: "64px 64px" }} />
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "80px 32px 60px", position: "relative" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "100px 32px 60px", position: "relative" }}>
           <div style={{ display: "flex", gap: 64, alignItems: "flex-start", flexWrap: "wrap" }}>
             {/* Left column */}
             <div style={{ flex: 1, minWidth: 320, maxWidth: 560 }}>
