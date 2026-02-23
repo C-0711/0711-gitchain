@@ -1,143 +1,106 @@
 /**
- * Container resolution
- * 
- * Resolves container IDs to actual container data from Git repositories
+ * Container resolution via GitChain API
  */
 
-import type { Container } from "@0711/core";
-import { parseContainerId } from "@0711/core";
-import { GitRepository } from "@0711/git";
+import type { Container, ContainerType } from "@c-0711/core";
 import type { ResolverOptions } from "./types";
 import { cacheGet, cacheSet } from "./cache";
 
-// Default Git config
-const gitConfig = {
-  baseDir: process.env.GITCHAIN_DATA_DIR || "/data/gitchain/repos",
-  authorName: "GitChain",
-  authorEmail: "system@gitchain.0711.io",
-};
+const API_URL = process.env.GITCHAIN_API_URL || "https://api-gitchain.0711.io";
 
 /**
- * Resolve container IDs to container data
+ * Resolve container IDs to container data via API
  */
 export async function resolveContainers(
   containerIds: string[],
   options: ResolverOptions = {}
 ): Promise<Container[]> {
-  const { resolveLatest = true } = options;
+  const { apiUrl = API_URL, apiKey, useCache = true, cacheTtl = 300 } = options;
   const containers: Container[] = [];
 
   for (const id of containerIds) {
-    const container = await resolveContainer(id, resolveLatest);
+    // Check cache first
+    if (useCache) {
+      const cached = await cacheGet<Container>(id);
+      if (cached && cached.id) {
+        containers.push(cached);
+        continue;
+      }
+    }
+
+    // Resolve via API
+    const container = await resolveFromApi(id, apiUrl, apiKey);
     if (container) {
       containers.push(container);
-    } else {
-      console.warn(`[GitChain] Container not found: ${id}`);
+      
+      // Cache result
+      if (useCache) {
+        await cacheSet(id, container, cacheTtl);
+      }
     }
   }
 
   return containers;
 }
 
-/**
- * Resolve a single container
- */
-async function resolveContainer(
+async function resolveFromApi(
   id: string,
-  resolveLatest: boolean
+  apiUrl: string,
+  apiKey?: string
 ): Promise<Container | null> {
-  const parsed = parseContainerId(id);
-  const cacheKey = `container:${id}`;
-
-  // Check cache first
-  const cached = await cacheGet<Container>(cacheKey);
-  if (cached) {
-    return cached;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  
+  if (apiKey) {
+    headers["Authorization"] = `Bearer ${apiKey}`;
   }
 
-  // Load from Git
   try {
-    const repoNamespace = `${parsed.type}/${parsed.namespace}`;
-    const repo = new GitRepository(repoNamespace, gitConfig);
-    
-    let data: object | null;
-    let version: number;
-    
-    if (parsed.version === "latest" || resolveLatest) {
-      // Get latest version
-      data = await repo.readContainer(parsed.identifier);
-      const history = await repo.getHistory(parsed.identifier, 1000);
-      version = history.length;
-    } else {
-      // Get specific version
-      const history = await repo.getHistory(parsed.identifier, 1000);
-      const targetIndex = history.length - (parsed.version as number);
-      
-      if (targetIndex < 0 || targetIndex >= history.length) {
+    const response = await fetch(`${apiUrl}/api/containers/${encodeURIComponent(id)}`, {
+      headers,
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        console.warn(`Container not found: ${id}`);
         return null;
       }
-      
-      const commit = history[targetIndex];
-      data = await repo.readAtCommit(parsed.identifier, commit.hash);
-      version = parsed.version as number;
+      throw new Error(`API error: ${response.status}`);
     }
 
-    if (!data) {
-      return null;
-    }
-
-    // Build container object
-    const container: Container = {
-      id: `0711:${parsed.type}:${parsed.namespace}:${parsed.identifier}:v${version}`,
-      type: parsed.type,
-      namespace: parsed.namespace,
-      identifier: parsed.identifier,
-      version,
-      meta: (data as any).meta || {
-        name: parsed.identifier,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        author: "unknown",
-      },
-      data: (data as any).data || data,
-      citations: (data as any).citations,
-      media: (data as any).media,
-    };
-
-    // Add Git info
-    const history = await repo.getHistory(parsed.identifier, 1);
-    if (history.length > 0) {
-      container.git = {
-        repository: repoNamespace,
-        branch: "main",
-        commit: history[0].hash,
-        commitMessage: history[0].message,
-        commitAt: history[0].timestamp.toISOString(),
-      };
-    }
-
-    // Cache the result
-    await cacheSet(cacheKey, container, 300);
-
-    return container;
-  } catch (err) {
-    console.error(`[GitChain] Error resolving container ${id}:`, err);
+    const data = await response.json();
+    return data as Container;
+  } catch (error) {
+    console.error(`Failed to resolve container ${id}:`, error);
     return null;
   }
 }
 
 /**
- * Clear resolver cache
+ * Pre-warm the cache for a list of containers
  */
-export function clearCache(): void {
-  // Cache is managed by cache.ts
+export async function warmCache(
+  containerIds: string[],
+  options: ResolverOptions = {}
+): Promise<void> {
+  await resolveContainers(containerIds, { ...options, useCache: true });
 }
 
 /**
- * Pre-warm cache with containers
+ * Get container metadata without full data
  */
-export async function warmCache(containers: Container[]): Promise<void> {
-  for (const container of containers) {
-    await cacheSet(`container:${container.id}`, container, 300);
-  }
+export async function getContainerMeta(
+  id: string,
+  options: ResolverOptions = {}
+): Promise<{ id: string; type: ContainerType; name: string; version: number } | null> {
+  const container = await resolveContainers([id], options);
+  if (!container[0]) return null;
+  
+  return {
+    id: container[0].id,
+    type: container[0].type,
+    name: container[0].meta.name,
+    version: container[0].version,
+  };
 }

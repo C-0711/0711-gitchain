@@ -1,5 +1,5 @@
 {
-  "name": "@0711/core",
+  "name": "@c-0711/core",
   "version": "0.1.0",
   "description": "GitChain core types, schemas, and validation utilities",
   "license": "Apache-2.0",
@@ -10,14 +10,10 @@
     "url": "https://github.com/C-0711/0711-gitchain.git",
     "directory": "packages/core"
   },
-  "keywords": [
-    "gitchain",
-    "types",
-    "schema",
-    "validation",
-    "ai",
-    "context"
-  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "keywords": ["gitchain", "types", "schema", "validation", "ai", "context"],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -27,16 +23,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
+  "files": ["dist", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsc",
-    "dev": "tsc -w",
-    "test": "jest",
-    "clean": "rm -rf dist",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

@@ -5,7 +5,7 @@
  * Every fact is traceable, every output is verified.
  */
 
-import type { Container } from "@0711/core";
+import type { Container } from "@c-0711/core";
 import type { InjectOptions, InjectedContext, Citation } from "./types";
 import { resolveContainers } from "./resolver";
 import { formatContext } from "./formatter";

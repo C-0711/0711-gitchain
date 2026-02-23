@@ -2,7 +2,7 @@
  * Inject layer types
  */
 
-import type { Container as CoreContainer } from "@0711/core";
+import type { Container as CoreContainer, ContainerType } from "@c-0711/core";
 
 // Re-export core container type with chain info
 export interface Container extends CoreContainer {
@@ -39,6 +39,12 @@ export interface InjectOptions {
   
   /** Maximum tokens for output */
   maxTokens?: number;
+  
+  /** API URL override */
+  apiUrl?: string;
+  
+  /** API key for authentication */
+  apiKey?: string;
 }
 
 export interface Citation {
@@ -89,6 +95,23 @@ export interface VerificationResult {
 }
 
 export interface ResolverOptions {
+  /** API URL override */
+  apiUrl?: string;
+  
+  /** API key for authentication */
+  apiKey?: string;
+  
+  /** Use cache (default: true) */
+  useCache?: boolean;
+  
+  /** Cache TTL in seconds (default: 300) */
+  cacheTtl?: number;
+  
+  /** Resolve "latest" to specific version */
   resolveLatest?: boolean;
+  
+  /** Include version history */
   includeHistory?: boolean;
 }
+
+export type { ContainerType };

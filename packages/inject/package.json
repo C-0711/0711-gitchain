@@ -1,5 +1,5 @@
 {
-  "name": "@0711/inject",
+  "name": "@c-0711/inject",
   "version": "0.1.0",
   "description": "Verified context injection for AI agents — the core GitChain innovation",
   "license": "Apache-2.0",
@@ -10,8 +10,8 @@
     "url": "https://github.com/C-0711/0711-gitchain.git",
     "directory": "packages/inject"
   },
-  "bugs": {
-    "url": "https://github.com/C-0711/0711-gitchain/issues"
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   },
   "keywords": [
     "ai",
@@ -21,8 +21,7 @@
     "blockchain",
     "verification",
     "rag",
-    "gitchain",
-    "knowledge-base"
+    "gitchain"
   ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -40,27 +39,18 @@
   ],
   "scripts": {
     "build": "tsc",
-    "dev": "tsc -w",
-    "test": "jest",
-    "clean": "rm -rf dist",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "ioredis": "^5.3.0"
   },
-  "devDependencies": {
-    "typescript": "^5.3.0",
-    "@types/node": "^20.0.0"
-  },
   "peerDependencies": {
-    "@0711/core": ">=0.1.0",
-    "@0711/chain": ">=0.1.0",
-    "@0711/git": ">=0.1.0"
+    "@c-0711/core": ">=0.1.0"
   },
-  "peerDependenciesMeta": {
-    "@0711/core": { "optional": false },
-    "@0711/chain": { "optional": true },
-    "@0711/git": { "optional": true }
+  "devDependencies": {
+    "@c-0711/core": "^0.1.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
   },
   "engines": {
     "node": ">=18.0.0"

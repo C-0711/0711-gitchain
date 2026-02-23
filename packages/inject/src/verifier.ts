@@ -2,7 +2,7 @@
  * Blockchain verification for containers
  */
 
-import type { Container } from "@0711/core";
+import type { Container } from "@c-0711/core";
 import type { ChainProof, VerificationResult } from "./types";
 
 /**
