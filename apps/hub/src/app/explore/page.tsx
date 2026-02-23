@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 interface Container {
   id: string;
@@ -9,240 +9,194 @@ interface Container {
   namespace: string;
   identifier: string;
   version: number;
-  meta: {
-    name: string;
-    description?: string;
-    updatedAt: string;
-  };
-  stats?: {
-    injects: number;
-    verifications: number;
-  };
+  name: string;
+  description: string;
+  isVerified: boolean;
+  etim: { classCode: string; className: string } | null;
+  stats: { atoms: number; categories: number };
+  updatedAt: string;
 }
+
+const typeConfig: Record<string, { icon: string; bg: string; text: string; border: string; label: string }> = {
+  product:   { icon: '📦', bg: 'bg-emerald-900/30', text: 'text-emerald-400', border: 'border-emerald-800', label: 'Products' },
+  campaign:  { icon: '📢', bg: 'bg-blue-900/30',    text: 'text-blue-400',    border: 'border-blue-800',    label: 'Campaigns' },
+  project:   { icon: '📋', bg: 'bg-purple-900/30',  text: 'text-purple-400',  border: 'border-purple-800',  label: 'Projects' },
+  memory:    { icon: '🧠', bg: 'bg-orange-900/30',  text: 'text-orange-400',  border: 'border-orange-800',  label: 'Memory' },
+  knowledge: { icon: '📚', bg: 'bg-yellow-900/30',  text: 'text-yellow-400',  border: 'border-yellow-800',  label: 'Knowledge' },
+};
 
 export default function ExplorePage() {
   const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState({ type: "", sort: "recent" });
-  const [searchQuery, setSearchQuery] = useState("");
+  const [filterType, setFilterType] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('recent');
 
   useEffect(() => {
     fetchContainers();
-  }, [filter]);
+  }, [filterType, sortBy]);
 
   const fetchContainers = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/containers?sort=${filter.sort}&type=${filter.type}`).catch(() => null);
-      if (res?.ok) {
+      const params = new URLSearchParams();
+      if (filterType) params.set('type', filterType);
+      if (sortBy) params.set('sort', sortBy);
+      if (searchQuery) params.set('q', searchQuery);
+
+      const res = await fetch(`/api/containers?${params}`);
+      if (res.ok) {
         const data = await res.json();
         setContainers(data.containers || []);
-      } else {
-        // Demo data
-        setContainers([
-          {
-            id: "0711:product:acme:widget-001:v2",
-            type: "product",
-            namespace: "acme",
-            identifier: "widget-001",
-            version: 2,
-            meta: { name: "Smart Widget Pro", description: "Advanced IoT widget with AI capabilities", updatedAt: "2026-02-22" },
-            stats: { injects: 1234, verifications: 567 },
-          },
-          {
-            id: "0711:knowledge:demo:ai-handbook:v3",
-            type: "knowledge",
-            namespace: "demo",
-            identifier: "ai-handbook",
-            version: 3,
-            meta: { name: "AI Agent Handbook", description: "Complete guide for AI agent development", updatedAt: "2026-02-21" },
-            stats: { injects: 890, verifications: 234 },
-          },
-          {
-            id: "0711:campaign:demo:launch-2026:v1",
-            type: "campaign",
-            namespace: "demo",
-            identifier: "launch-2026",
-            version: 1,
-            meta: { name: "Product Launch Q1", description: "Marketing campaign for Q1 2026", updatedAt: "2026-02-20" },
-            stats: { injects: 456, verifications: 123 },
-          },
-          {
-            id: "0711:project:demo:gitchain-docs:v5",
-            type: "project",
-            namespace: "demo",
-            identifier: "gitchain-docs",
-            version: 5,
-            meta: { name: "GitChain Documentation", description: "Official documentation project", updatedAt: "2026-02-19" },
-            stats: { injects: 2345, verifications: 890 },
-          },
-          {
-            id: "0711:memory:demo:agent-context:v1",
-            type: "memory",
-            namespace: "demo",
-            identifier: "agent-context",
-            version: 1,
-            meta: { name: "Agent Memory Store", description: "Persistent memory for AI agents", updatedAt: "2026-02-18" },
-            stats: { injects: 678, verifications: 345 },
-          },
-        ]);
       }
+    } catch (e) {
+      console.error('Failed to fetch:', e);
     } finally {
       setLoading(false);
     }
   };
 
-  const types = [
-    { value: "", label: "All types", icon: "📦" },
-    { value: "product", label: "Products", icon: "🏭" },
-    { value: "campaign", label: "Campaigns", icon: "📢" },
-    { value: "project", label: "Projects", icon: "📋" },
-    { value: "memory", label: "Memory", icon: "🧠" },
-    { value: "knowledge", label: "Knowledge", icon: "📚" },
-  ];
-
-  const typeColors: Record<string, string> = {
-    product: "bg-emerald-900/30 text-emerald-400 border-emerald-700",
-    campaign: "bg-blue-900/30 text-blue-400 border-blue-700",
-    project: "bg-purple-900/30 text-purple-400 border-purple-700",
-    memory: "bg-orange-900/30 text-orange-400 border-orange-700",
-    knowledge: "bg-yellow-900/30 text-yellow-400 border-yellow-700",
-  };
-
-  const filteredContainers = containers.filter(c => 
-    !searchQuery || 
-    c.meta.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  const filtered = containers.filter(c =>
+    !searchQuery ||
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Explore</h1>
-        <p className="text-gray-400">
-          Discover verified containers across the GitChain network
-        </p>
-      </div>
+    <div className="min-h-screen bg-[#0d1117]">
+      <div className="max-w-[1280px] mx-auto px-6 py-8">
 
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4 mb-8">
-        <div className="flex-1">
+        {/* Hero */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">Explore</h1>
+          <p className="text-[#8b949e] text-lg">
+            Discover verified containers across the GitChain network
+          </p>
+        </div>
+
+        {/* Search bar */}
+        <div className="relative mb-6">
+          <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#484f58]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
           <input
             type="text"
-            placeholder="Search containers..."
+            placeholder="Search all containers..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 focus:border-emerald-500 focus:outline-none"
+            onKeyDown={(e) => e.key === 'Enter' && fetchContainers()}
+            className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl pl-12 pr-4 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
-          {types.map((type) => (
+
+        {/* Type filters */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <button
+            onClick={() => setFilterType('')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition border ${
+              !filterType
+                ? 'bg-[#21262d] border-[#484f58] text-white'
+                : 'border-[#30363d] text-[#8b949e] hover:border-[#484f58]'
+            }`}
+          >
+            All
+          </button>
+          {Object.entries(typeConfig).map(([key, tc]) => (
             <button
-              key={type.value}
-              onClick={() => setFilter({ ...filter, type: type.value })}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition ${
-                filter.type === type.value
-                  ? "bg-emerald-500/20 border border-emerald-500 text-emerald-400"
-                  : "bg-gray-800 border border-gray-700 hover:border-gray-600"
+              key={key}
+              onClick={() => setFilterType(filterType === key ? '' : key)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition border ${
+                filterType === key
+                  ? `${tc.bg} ${tc.border} ${tc.text}`
+                  : 'border-[#30363d] text-[#8b949e] hover:border-[#484f58]'
               }`}
             >
-              <span>{type.icon}</span>
-              <span>{type.label}</span>
+              <span>{tc.icon}</span>
+              {tc.label}
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Sort options */}
-      <div className="flex justify-between items-center mb-6">
-        <p className="text-gray-400 text-sm">
-          {filteredContainers.length} containers
-        </p>
-        <select
-          value={filter.sort}
-          onChange={(e) => setFilter({ ...filter, sort: e.target.value })}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm"
-        >
-          <option value="recent">Recently updated</option>
-          <option value="popular">Most injected</option>
-          <option value="verified">Most verified</option>
-          <option value="name">Alphabetical</option>
-        </select>
-      </div>
+        {/* Sort + count */}
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-[#8b949e]">{filtered.length} container{filtered.length !== 1 ? 's' : ''}</p>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="bg-[#21262d] border border-[#363b42] rounded-lg px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+          >
+            <option value="recent">Recently updated</option>
+            <option value="name">Alphabetical</option>
+            <option value="oldest">Oldest first</option>
+          </select>
+        </div>
 
-      {/* Results */}
-      {loading ? (
-        <div className="grid gap-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 animate-pulse">
-              <div className="h-6 bg-gray-700 rounded w-1/3 mb-3"></div>
-              <div className="h-4 bg-gray-700 rounded w-2/3 mb-4"></div>
-              <div className="h-4 bg-gray-700 rounded w-1/2"></div>
-            </div>
-          ))}
-        </div>
-      ) : filteredContainers.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="text-6xl mb-4">🔍</div>
-          <h2 className="text-xl font-semibold mb-2">No containers found</h2>
-          <p className="text-gray-400 mb-6">Try adjusting your filters or search query</p>
-        </div>
-      ) : (
-        <div className="grid gap-4">
-          {filteredContainers.map((container) => (
-            <Link
-              key={container.id}
-              href={`/containers/${encodeURIComponent(container.id)}`}
-              className="block bg-gray-800/50 border border-gray-700 rounded-lg p-6 hover:border-emerald-500/50 hover:bg-gray-800/70 transition group"
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex items-center gap-3">
-                  <span className={`px-2 py-1 text-xs rounded border ${typeColors[container.type] || "bg-gray-700"}`}>
-                    {container.type}
-                  </span>
-                  <h2 className="text-lg font-semibold group-hover:text-emerald-400 transition">
-                    {container.meta.name}
-                  </h2>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <span>v{container.version}</span>
-                  <span>•</span>
-                  <span>✅ Verified</span>
-                </div>
+        {/* Results */}
+        {loading ? (
+          <div className="space-y-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="border border-[#30363d] rounded-lg p-6 animate-pulse">
+                <div className="h-5 bg-[#21262d] rounded w-1/3 mb-3"></div>
+                <div className="h-4 bg-[#21262d] rounded w-2/3 mb-3"></div>
+                <div className="h-3 bg-[#21262d] rounded w-1/2"></div>
               </div>
-              
-              {container.meta.description && (
-                <p className="text-gray-400 text-sm mb-3">{container.meta.description}</p>
-              )}
-              
-              <div className="flex items-center gap-6 text-sm text-gray-500">
-                <code className="text-xs bg-gray-900 px-2 py-1 rounded">{container.id}</code>
-                {container.stats && (
-                  <>
-                    <span className="flex items-center gap-1">
-                      <span>💉</span> {container.stats.injects.toLocaleString()} injects
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span>✓</span> {container.stats.verifications.toLocaleString()} verifications
-                    </span>
-                  </>
-                )}
-                <span>Updated {new Date(container.meta.updatedAt).toLocaleDateString()}</span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
-
-      {/* Load more */}
-      {filteredContainers.length >= 5 && (
-        <div className="text-center mt-8">
-          <button className="px-6 py-2 border border-gray-700 hover:border-gray-500 rounded-lg transition">
-            Load more
-          </button>
-        </div>
-      )}
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-20 border border-[#30363d] rounded-xl">
+            <div className="text-6xl mb-4">🔍</div>
+            <h2 className="text-xl font-semibold mb-2 text-white">No containers found</h2>
+            <p className="text-[#8b949e] mb-6">Try adjusting your filters or search query</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filtered.map((c) => {
+              const tc = typeConfig[c.type] || typeConfig.product;
+              return (
+                <Link
+                  key={c.id}
+                  href={`/containers/${encodeURIComponent(c.id)}`}
+                  className="block border border-[#30363d] rounded-lg p-5 hover:border-[#484f58] hover:bg-[#161b22]/50 transition group"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-2xl ${tc.bg} flex-shrink-0`}>
+                      {tc.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm text-blue-400">{c.namespace}</span>
+                        <span className="text-[#30363d]">/</span>
+                        <span className="font-semibold text-white group-hover:text-blue-400 transition text-lg">{c.name}</span>
+                        <span className={`px-2 py-0.5 text-xs rounded-full border ${tc.bg} ${tc.text} ${tc.border}`}>
+                          {c.type}
+                        </span>
+                        {c.isVerified && (
+                          <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-900/30 text-emerald-400 border border-emerald-800">
+                            ✓ Verified
+                          </span>
+                        )}
+                      </div>
+                      {c.description && (
+                        <p className="text-sm text-[#8b949e] mb-2">{c.description}</p>
+                      )}
+                      <div className="flex items-center gap-5 text-xs text-[#484f58]">
+                        <code className="bg-[#161b22] px-2 py-0.5 rounded font-mono">{c.id}</code>
+                        <span>{c.stats.atoms.toLocaleString()} atoms</span>
+                        <span>{c.stats.categories} categories</span>
+                        <span>v{c.version}</span>
+                        {c.etim && (
+                          <span className="text-blue-400/60">ETIM {c.etim.classCode}</span>
+                        )}
+                        <span className="ml-auto">Updated {new Date(c.updatedAt).toLocaleDateString('de-DE')}</span>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

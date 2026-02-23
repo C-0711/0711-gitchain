@@ -1,31 +1,27 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 interface Stats {
-  containers: number;
-  namespaces: number;
-  batches: number;
-  verified: number;
+  totalContainers: number;
+  totalNamespaces: number;
+  verifiedCount: number;
+  totalAtoms: number;
 }
 
-interface RecentActivity {
+interface Container {
   id: string;
-  action: string;
-  containerId: string;
-  containerName: string;
-  timestamp: string;
+  type: string;
+  namespace: string;
+  name: string;
+  stats: { atoms: number; categories: number };
+  updatedAt: string;
 }
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<Stats>({
-    containers: 0,
-    namespaces: 0,
-    batches: 0,
-    verified: 0,
-  });
-  const [activity, setActivity] = useState<RecentActivity[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,156 +30,182 @@ export default function DashboardPage() {
 
   const fetchData = async () => {
     try {
-      // Try API first
-      const res = await fetch("/api/stats").catch(() => null);
-      if (res?.ok) {
+      const res = await fetch('/api/containers');
+      if (res.ok) {
         const data = await res.json();
-        setStats(data.stats || { containers: 0, namespaces: 0, batches: 0, verified: 0 });
-        setActivity(data.activity || []);
-      } else {
-        // Demo data
-        setStats({
-          containers: 3,
-          namespaces: 2,
-          batches: 1,
-          verified: 3,
-        });
-        setActivity([
-          {
-            id: "1",
-            action: "created",
-            containerId: "0711:product:acme:widget-001:v2",
-            containerName: "Smart Widget Pro",
-            timestamp: "2 min ago",
-          },
-          {
-            id: "2",
-            action: "verified",
-            containerId: "0711:campaign:demo:launch-2026:v1",
-            containerName: "Product Launch Q1",
-            timestamp: "15 min ago",
-          },
-          {
-            id: "3",
-            action: "updated",
-            containerId: "0711:knowledge:demo:user-guide:v3",
-            containerName: "Platform User Guide",
-            timestamp: "1 hour ago",
-          },
-        ]);
+        setStats(data.stats);
+        setContainers(data.containers || []);
       }
+    } catch (e) {
+      console.error('Failed to fetch:', e);
     } finally {
       setLoading(false);
     }
   };
 
+  const typeIcons: Record<string, string> = {
+    product: '📦', campaign: '📢', project: '📋', memory: '🧠', knowledge: '📚',
+  };
+
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8">
-      <h1 className="text-2xl font-bold mb-8">Dashboard</h1>
+    <div className="min-h-screen bg-[#0d1117]">
+      <div className="max-w-[1280px] mx-auto px-6 py-8">
 
-      {/* Stats Grid */}
-      <div className="grid md:grid-cols-4 gap-6 mb-12">
-        <StatCard
-          title="Containers"
-          value={stats.containers.toLocaleString()}
-          icon="📦"
-        />
-        <StatCard
-          title="Namespaces"
-          value={stats.namespaces.toString()}
-          icon="📁"
-        />
-        <StatCard
-          title="Chain Batches"
-          value={stats.batches.toString()}
-          icon="⛓️"
-        />
-        <StatCard
-          title="Verified"
-          value={stats.containers > 0 ? `${((stats.verified / stats.containers) * 100).toFixed(0)}%` : "0%"}
-          icon="✅"
-        />
-      </div>
+        <h1 className="text-2xl font-bold text-white mb-8">Dashboard</h1>
 
-      {/* Quick Actions */}
-      <div className="grid md:grid-cols-3 gap-6 mb-12">
-        <Link
-          href="/containers/new"
-          className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-6 hover:border-emerald-500 transition"
-        >
-          <h3 className="font-semibold mb-2">Create Container</h3>
-          <p className="text-gray-400 text-sm">Add a new container to GitChain</p>
-        </Link>
-        <Link
-          href="/inject"
-          className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-6 hover:border-blue-500 transition"
-        >
-          <h3 className="font-semibold mb-2">Inject Context</h3>
-          <p className="text-gray-400 text-sm">Test the inject API playground</p>
-        </Link>
-        <Link
-          href="/verify"
-          className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-6 hover:border-purple-500 transition"
-        >
-          <h3 className="font-semibold mb-2">Verify</h3>
-          <p className="text-gray-400 text-sm">Check blockchain proofs</p>
-        </Link>
-      </div>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+          <StatCard
+            label="Containers"
+            value={stats?.totalContainers ?? 0}
+            icon="📦"
+            color="emerald"
+            href="/containers"
+          />
+          <StatCard
+            label="Namespaces"
+            value={stats?.totalNamespaces ?? 0}
+            icon="📁"
+            color="blue"
+            href="/namespaces"
+          />
+          <StatCard
+            label="Total Atoms"
+            value={stats?.totalAtoms ?? 0}
+            icon="⚛️"
+            color="purple"
+          />
+          <StatCard
+            label="On-Chain"
+            value={stats?.verifiedCount ?? 0}
+            icon="⛓️"
+            color="orange"
+            href="/verify"
+          />
+        </div>
 
-      {/* Recent Activity */}
-      <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-4">Recent Activity</h2>
-        {activity.length === 0 ? (
-          <p className="text-gray-400">No recent activity</p>
-        ) : (
-          <div className="space-y-4">
-            {activity.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between py-3 border-b border-gray-700 last:border-0"
-              >
-                <div className="flex items-center gap-4">
-                  <span className="text-2xl">
-                    {item.action === "created" && "📦"}
-                    {item.action === "updated" && "✏️"}
-                    {item.action === "verified" && "✅"}
-                  </span>
-                  <div>
-                    <Link
-                      href={`/containers/${encodeURIComponent(item.containerId)}`}
-                      className="font-medium hover:text-emerald-400"
-                    >
-                      {item.containerName}
-                    </Link>
-                    <p className="text-sm text-gray-400">{item.action}</p>
+        {/* Quick Actions */}
+        <div className="grid md:grid-cols-3 gap-4 mb-10">
+          <Link
+            href="/containers/new"
+            className="group border border-[#30363d] rounded-lg p-5 hover:border-emerald-600 transition bg-[#0d1117]"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-emerald-900/30 rounded-lg flex items-center justify-center text-xl group-hover:bg-emerald-900/50 transition">
+                📦
+              </div>
+              <h3 className="font-semibold text-white">Create Container</h3>
+            </div>
+            <p className="text-sm text-[#8b949e]">Start a new knowledge container with versioning and blockchain proofs</p>
+          </Link>
+          <Link
+            href="/inject"
+            className="group border border-[#30363d] rounded-lg p-5 hover:border-blue-600 transition bg-[#0d1117]"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-blue-900/30 rounded-lg flex items-center justify-center text-xl group-hover:bg-blue-900/50 transition">
+                💉
+              </div>
+              <h3 className="font-semibold text-white">Inject Context</h3>
+            </div>
+            <p className="text-sm text-[#8b949e]">Test the inject API and generate verified context for AI agents</p>
+          </Link>
+          <Link
+            href="/verify"
+            className="group border border-[#30363d] rounded-lg p-5 hover:border-purple-600 transition bg-[#0d1117]"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-purple-900/30 rounded-lg flex items-center justify-center text-xl group-hover:bg-purple-900/50 transition">
+                ⛓️
+              </div>
+              <h3 className="font-semibold text-white">Verify Proof</h3>
+            </div>
+            <p className="text-sm text-[#8b949e]">Check blockchain proofs and verify container integrity</p>
+          </Link>
+        </div>
+
+        {/* Recent Containers */}
+        <div className="border border-[#30363d] rounded-lg overflow-hidden">
+          <div className="px-5 py-3 bg-[#161b22] border-b border-[#21262d] flex items-center justify-between">
+            <h2 className="font-semibold text-white">Recent Containers</h2>
+            <Link href="/containers" className="text-sm text-blue-400 hover:underline">View all</Link>
+          </div>
+
+          {loading ? (
+            <div className="p-6 space-y-4">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="animate-pulse flex gap-4">
+                  <div className="w-10 h-10 bg-[#21262d] rounded"></div>
+                  <div className="flex-1">
+                    <div className="h-4 bg-[#21262d] rounded w-1/3 mb-2"></div>
+                    <div className="h-3 bg-[#21262d] rounded w-1/2"></div>
                   </div>
                 </div>
-                <span className="text-sm text-gray-500">{item.timestamp}</span>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          ) : containers.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-4xl mb-3">📦</div>
+              <p className="text-[#8b949e] mb-4">No containers yet</p>
+              <Link href="/containers/new" className="text-sm text-emerald-400 hover:underline">
+                Create your first container
+              </Link>
+            </div>
+          ) : (
+            <div className="divide-y divide-[#21262d]">
+              {containers.slice(0, 10).map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/containers/${encodeURIComponent(c.id)}`}
+                  className="flex items-center gap-4 px-5 py-3 hover:bg-[#161b22] transition group"
+                >
+                  <span className="text-2xl">{typeIcons[c.type] || '📦'}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-blue-400">{c.namespace}</span>
+                      <span className="text-[#484f58]">/</span>
+                      <span className="font-medium text-white group-hover:text-blue-400 transition">{c.name}</span>
+                    </div>
+                    <div className="text-xs text-[#484f58]">
+                      {c.stats.atoms.toLocaleString()} atoms &middot; {c.stats.categories} categories
+                    </div>
+                  </div>
+                  <span className="text-xs text-[#484f58]">
+                    {new Date(c.updatedAt).toLocaleDateString('de-DE')}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function StatCard({
-  title,
-  value,
-  icon,
-}: {
-  title: string;
-  value: string;
+function StatCard({ label, value, icon, color, href }: {
+  label: string;
+  value: number;
   icon: string;
+  color: string;
+  href?: string;
 }) {
-  return (
-    <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
-      <div className="flex items-center gap-3 mb-2">
-        <span className="text-2xl">{icon}</span>
-        <span className="text-gray-400">{title}</span>
+  const colorMap: Record<string, string> = {
+    emerald: 'border-emerald-800 bg-emerald-900/10',
+    blue: 'border-blue-800 bg-blue-900/10',
+    purple: 'border-purple-800 bg-purple-900/10',
+    orange: 'border-orange-800 bg-orange-900/10',
+  };
+
+  const inner = (
+    <div className={`border rounded-lg p-5 transition ${colorMap[color] || 'border-[#30363d]'} ${href ? 'hover:border-opacity-100 cursor-pointer' : ''}`}>
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-xl">{icon}</span>
+        <span className="text-sm text-[#8b949e]">{label}</span>
       </div>
-      <div className="text-3xl font-bold">{value}</div>
+      <div className="text-3xl font-bold text-white">{value.toLocaleString()}</div>
     </div>
   );
+
+  return href ? <Link href={href}>{inner}</Link> : inner;
 }

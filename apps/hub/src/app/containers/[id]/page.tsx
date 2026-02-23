@@ -1,20 +1,49 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-// Types
-interface ContainerFile {
+// ─── Types ──────────────────────────────────────────────
+
+interface Atom {
+  field: string;
+  name: string;
+  value: any;
+  unit: string | null;
+  source: string;
+  contributor: string;
+  trust: string;
+  citation: { document: string; confidence: number; page?: number; excerpt?: string } | null;
+}
+
+interface FileData {
   name: string;
   path: string;
-  type: 'file' | 'directory';
-  size?: number;
-  lastCommit?: {
-    message: string;
-    author: string;
-    date: string;
-    hash: string;
-  };
+  type: string;
+  atoms: Atom[];
+}
+
+interface Layer {
+  id: string;
+  name: string;
+  type: string;
+  contributor_id: string;
+  trust_level: string;
+  atom_count: number;
+}
+
+interface Contributor {
+  contributor_id: string;
+  source_type: string;
+  count: number;
+}
+
+interface Commit {
+  hash: string;
+  message: string;
+  author: string;
+  timestamp: string;
+  version: number;
 }
 
 interface ContainerData {
@@ -22,477 +51,784 @@ interface ContainerData {
   name: string;
   description: string;
   version: number;
-  visibility: 'public' | 'private';
-  defaultBranch: string;
-  lastCommit: {
-    hash: string;
-    message: string;
-    author: string;
-    date: string;
-  };
-  stats: {
-    commits: number;
-    contributors: number;
-    files: number;
-    size: string;
-  };
-  owner: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
-  files: ContainerFile[];
-  readme?: string;
+  type: string;
+  namespace: string;
+  identifier: string;
+  snr: string;
+  manufacturer: string;
+  isVerified: boolean;
+  etim: { class_code: string; class_name: string; version?: string } | null;
+  files: FileData[];
+  layers: Layer[];
+  contributors: Contributor[];
+  commits: Commit[];
+  stats: { totalAtoms: number; categories: number };
+  createdAt: string;
+  updatedAt: string;
+  chainAnchor?: { txHash: string; network: string; blockNumber: number; batchId: string } | null;
 }
 
-// Mock data for CS7001iAW
-const EXAMPLE_CONTAINER: ContainerData = {
-  id: '0711:product:bosch:7736606982',
-  name: 'CS7001iAW 17 OR-T',
-  description: 'Compress 7001i AW - Luft/Wasser-Wärmepumpe Außeneinheit',
-  version: 7,
-  visibility: 'public',
-  defaultBranch: 'main',
-  lastCommit: {
-    hash: 'eacb2b2',
-    message: 'AI enrichment: Added 207 citations from datasheets',
-    author: 'bombas@0711.io',
-    date: '2026-02-23T10:30:00Z',
-  },
-  stats: {
-    commits: 23,
-    contributors: 3,
-    files: 18,
-    size: '2.4 MB',
-  },
-  owner: {
-    id: 'bosch',
-    name: 'Robert Bosch GmbH',
-  },
-  files: [
-    { name: 'README.md', path: 'README.md', type: 'file', size: 2048, lastCommit: { message: 'Initial product description', author: 'bosch', date: '2026-01-15', hash: 'abc123' } },
-    { name: 'manifest.json', path: 'manifest.json', type: 'file', size: 1024, lastCommit: { message: 'Updated version to 7', author: 'system', date: '2026-02-23', hash: 'eacb2b2' } },
-    { name: 'core', path: 'core', type: 'directory' },
-    { name: 'etim', path: 'etim', type: 'directory' },
-    { name: 'specs', path: 'specs', type: 'directory' },
-    { name: 'media', path: 'media', type: 'directory' },
-    { name: 'citations', path: 'citations', type: 'directory' },
-    { name: '.gitchain', path: '.gitchain', type: 'directory' },
-  ],
-  readme: `# CS7001iAW 17 OR-T
+// ─── Trust Colors ───────────────────────────────────────
 
-**Compress 7001i AW** - Luft/Wasser-Wärmepumpe Außeneinheit
-
-## Übersicht
-
-| Eigenschaft | Wert |
-|-------------|------|
-| SNR | 7736606982 |
-| ETIM | EC012034 - Luft/Wasser-Wärmepumpe |
-| Heizleistung | 17,1 kW (A7/W35) |
-| COP | 4,82 (A7/W35) |
-
-## Datenquellen
-
-- **Bosch Original**: Stammdaten, Beschreibungen
-- **ETIM International**: Klassifikation, 88 Features
-- **AI Enrichment**: 207 Zitate aus Datenblättern
-
-## Zuletzt aktualisiert
-
-Version 7 • 23. Feb 2026 • 3 Contributors
-`,
+const trustConfig: Record<string, { bg: string; text: string; label: string; dot: string }> = {
+  highest:   { bg: 'bg-green-900/40',  text: 'text-green-400',  label: 'Manufacturer', dot: 'bg-green-400' },
+  high:      { bg: 'bg-blue-900/40',   text: 'text-blue-400',   label: 'Classification', dot: 'bg-blue-400' },
+  certified: { bg: 'bg-indigo-900/40', text: 'text-indigo-400', label: 'Certified', dot: 'bg-indigo-400' },
+  verified:  { bg: 'bg-cyan-900/40',   text: 'text-cyan-400',   label: 'Verified', dot: 'bg-cyan-400' },
+  medium:    { bg: 'bg-yellow-900/40', text: 'text-yellow-400', label: 'AI Generated', dot: 'bg-yellow-400' },
+  customer:  { bg: 'bg-purple-900/40', text: 'text-purple-400', label: 'Customer', dot: 'bg-purple-400' },
+  generated: { bg: 'bg-orange-900/40', text: 'text-orange-400', label: 'Generated', dot: 'bg-orange-400' },
+  community: { bg: 'bg-gray-800',      text: 'text-gray-400',   label: 'Community', dot: 'bg-gray-400' },
 };
 
-// File icon component
-function FileIcon({ type, name }: { type: 'file' | 'directory'; name: string }) {
-  if (type === 'directory') {
-    return (
-      <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-        <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-      </svg>
-    );
-  }
-  
-  // File icons based on extension
-  const ext = name.split('.').pop()?.toLowerCase();
-  
-  if (ext === 'json') {
-    return (
-      <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-      </svg>
-    );
-  }
-  
-  if (ext === 'md') {
-    return (
-      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    );
-  }
-  
-  return (
-    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-    </svg>
-  );
-}
+const sourceColors: Record<string, string> = {
+  manufacturer: 'bg-green-900/40 text-green-400 border-green-800',
+  classification: 'bg-blue-900/40 text-blue-400 border-blue-800',
+  ai_generated: 'bg-yellow-900/40 text-yellow-400 border-yellow-800',
+  ai_verified: 'bg-cyan-900/40 text-cyan-400 border-cyan-800',
+  certification: 'bg-indigo-900/40 text-indigo-400 border-indigo-800',
+  customer_extension: 'bg-purple-900/40 text-purple-400 border-purple-800',
+};
 
-// Tab component
-function Tab({ active, children, onClick }: { active: boolean; children: React.ReactNode; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-        active
-          ? 'border-orange-500 text-white'
-          : 'border-transparent text-gray-400 hover:text-white hover:border-gray-600'
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
+const typeConfig: Record<string, { icon: string; color: string }> = {
+  product: { icon: '📦', color: 'text-emerald-400' },
+  campaign: { icon: '📢', color: 'text-blue-400' },
+  project: { icon: '📋', color: 'text-purple-400' },
+  memory: { icon: '🧠', color: 'text-orange-400' },
+  knowledge: { icon: '📚', color: 'text-yellow-400' },
+};
 
-export default function ContainerFilesPage({ params }: { params: { id: string } }) {
-  const [activeTab, setActiveTab] = useState<'files' | 'commits' | 'contributors' | 'settings'>('files');
-  const [currentPath, setCurrentPath] = useState<string[]>([]);
-  const container = EXAMPLE_CONTAINER;
+// ─── Main Component ─────────────────────────────────────
 
-  // Get files for current path
-  const getCurrentFiles = (): ContainerFile[] => {
-    if (currentPath.length === 0) {
-      return container.files;
+export default function ContainerPage({ params }: { params: { id: string } }) {
+  const [container, setContainer] = useState<ContainerData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'data' | 'history' | 'chain' | 'schema' | 'settings'>('data');
+  const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
+  const [searchAtoms, setSearchAtoms] = useState('');
+  const [expandedAtom, setExpandedAtom] = useState<number | null>(null);
+  const [selectedVersion, setSelectedVersion] = useState<string>('latest');
+
+  const containerId = decodeURIComponent(params.id);
+
+  useEffect(() => {
+    async function fetchContainer() {
+      try {
+        const res = await fetch(`/api/containers/${encodeURIComponent(containerId)}`);
+        if (!res.ok) throw new Error('Container not found');
+        const data = await res.json();
+        setContainer(data);
+        if (data.files?.length > 0) {
+          setSelectedFile(data.files[0]);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load');
+      } finally {
+        setLoading(false);
+      }
     }
-    
-    // Mock subdirectory contents
-    const subdir = currentPath[currentPath.length - 1];
-    
-    const subdirs: Record<string, ContainerFile[]> = {
-      'core': [
-        { name: 'identity.json', path: 'core/identity.json', type: 'file', size: 512, lastCommit: { message: 'Initial identity', author: 'bosch', date: '2026-01-15', hash: 'abc123' } },
-        { name: 'description.json', path: 'core/description.json', type: 'file', size: 1024, lastCommit: { message: 'Added EN description', author: 'bosch', date: '2026-01-20', hash: 'def456' } },
-      ],
-      'etim': [
-        { name: 'classification.json', path: 'etim/classification.json', type: 'file', size: 256, lastCommit: { message: 'ETIM 9.0 classification', author: 'etim-international', date: '2026-01-18', hash: 'ghi789' } },
-        { name: 'features', path: 'etim/features', type: 'directory' },
-      ],
-      'specs': [
-        { name: 'performance.json', path: 'specs/performance.json', type: 'file', size: 2048, lastCommit: { message: 'AI enrichment: COP values', author: 'bombas@0711.io', date: '2026-02-23', hash: 'eacb2b2' } },
-        { name: 'dimensions.json', path: 'specs/dimensions.json', type: 'file', size: 512, lastCommit: { message: 'AI enrichment: Dimensions', author: 'bombas@0711.io', date: '2026-02-23', hash: 'eacb2b2' } },
-        { name: 'electrical.json', path: 'specs/electrical.json', type: 'file', size: 384, lastCommit: { message: 'AI enrichment: Electrical specs', author: 'bombas@0711.io', date: '2026-02-23', hash: 'eacb2b2' } },
-      ],
-      'media': [
-        { name: 'product-main.jpg', path: 'media/product-main.jpg', type: 'file', size: 245000, lastCommit: { message: 'Product images', author: 'bosch', date: '2026-01-15', hash: 'abc123' } },
-        { name: 'datasheet-de.pdf', path: 'media/datasheet-de.pdf', type: 'file', size: 1200000, lastCommit: { message: 'Added datasheet', author: 'bosch', date: '2026-01-15', hash: 'abc123' } },
-      ],
-      'citations': [
-        { name: 'citations.jsonl', path: 'citations/citations.jsonl', type: 'file', size: 45000, lastCommit: { message: 'AI enrichment: 207 citations', author: 'bombas@0711.io', date: '2026-02-23', hash: 'eacb2b2' } },
-      ],
-      '.gitchain': [
-        { name: 'config.yaml', path: '.gitchain/config.yaml', type: 'file', size: 256, lastCommit: { message: 'Container config', author: 'system', date: '2026-01-15', hash: 'abc123' } },
-        { name: 'contributors.json', path: '.gitchain/contributors.json', type: 'file', size: 512, lastCommit: { message: 'Added bombas as contributor', author: 'bosch', date: '2026-02-10', hash: 'xyz789' } },
-        { name: 'anchors.json', path: '.gitchain/anchors.json', type: 'file', size: 1024, lastCommit: { message: 'Blockchain anchor v7', author: 'system', date: '2026-02-23', hash: 'eacb2b2' } },
-      ],
-    };
-    
-    return subdirs[subdir] || [];
-  };
+    fetchContainer();
+  }, [containerId]);
 
-  const formatFileSize = (bytes?: number) => {
-    if (!bytes) return '-';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
+  // ─── Loading State ──────────────────────────────────
 
-  const formatDate = (date: string) => {
-    const d = new Date(date);
-    const now = new Date();
-    const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return 'today';
-    if (diffDays === 1) return 'yesterday';
-    if (diffDays < 30) return `${diffDays} days ago`;
-    return d.toLocaleDateString('de-DE');
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0d1117]">
+        <div className="max-w-[1280px] mx-auto px-6 py-8">
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 bg-gray-800 rounded w-1/3"></div>
+            <div className="h-4 bg-gray-800 rounded w-2/3"></div>
+            <div className="h-12 bg-gray-800 rounded"></div>
+            <div className="grid grid-cols-4 gap-6">
+              <div className="h-64 bg-gray-800 rounded"></div>
+              <div className="col-span-3 h-64 bg-gray-800 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !container) {
+    return (
+      <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔍</div>
+          <h2 className="text-2xl font-bold mb-2">Container not found</h2>
+          <p className="text-gray-400 mb-6">{error || 'The container you requested could not be found.'}</p>
+          <code className="text-sm text-gray-500 bg-gray-800 px-3 py-1 rounded block mb-6">{containerId}</code>
+          <Link href="/containers" className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg transition">
+            Browse Containers
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const tc = typeConfig[container.type] || { icon: '📦', color: 'text-gray-400' };
+  const filteredAtoms = selectedFile?.atoms.filter(a =>
+    !searchAtoms ||
+    (a.name || a.field).toLowerCase().includes(searchAtoms.toLowerCase()) ||
+    String(a.value).toLowerCase().includes(searchAtoms.toLowerCase())
+  ) || [];
+
+  const totalTrustBreakdown = container.files.reduce((acc, f) => {
+    f.atoms.forEach(a => {
+      acc[a.trust] = (acc[a.trust] || 0) + 1;
+    });
+    return acc;
+  }, {} as Record<string, number>);
+
+  // ─── Render ─────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-white">
-      {/* Header */}
-      <div className="border-b border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm mb-4">
-            <Link href="/containers" className="text-blue-400 hover:underline">containers</Link>
-            <span className="text-gray-500">/</span>
-            <span className="text-blue-400 hover:underline cursor-pointer">{container.owner.name.toLowerCase().replace(/\s+/g, '-')}</span>
-            <span className="text-gray-500">/</span>
-            <span className="font-semibold">{container.id.split(':').pop()}</span>
-            <span className="ml-2 px-2 py-0.5 text-xs rounded-full border border-gray-600 text-gray-400">
-              {container.visibility}
+    <div className="min-h-screen bg-[#0d1117] text-[#c9d1d9]">
+
+      {/* ════════════════════════════════════════════════════
+          HEADER - GitHub-style repo header
+          ════════════════════════════════════════════════════ */}
+      <div className="border-b border-[#21262d] bg-[#0d1117]">
+        <div className="max-w-[1280px] mx-auto px-6 pt-6 pb-0">
+
+          {/* Breadcrumb + Type */}
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-xl">{tc.icon}</span>
+            <div className="flex items-center gap-2 text-lg">
+              <Link href={`/namespaces/${container.namespace}`} className="text-blue-400 hover:underline font-semibold">
+                {container.namespace}
+              </Link>
+              <span className="text-[#484f58]">/</span>
+              <span className="font-bold text-white">{container.identifier}</span>
+            </div>
+            <span className="px-2 py-0.5 text-xs rounded-full border border-[#30363d] text-[#8b949e]">
+              {container.type}
             </span>
+            {container.isVerified && (
+              <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-900/30 text-emerald-400 border border-emerald-800">
+                ✓ Verified
+              </span>
+            )}
           </div>
 
-          {/* Title and description */}
-          <h1 className="text-xl font-semibold mb-1">{container.name}</h1>
-          <p className="text-gray-400 text-sm">{container.description}</p>
+          {/* Title + Description */}
+          <h1 className="text-xl font-semibold text-white mb-1">{container.name}</h1>
+          {container.description && (
+            <p className="text-sm text-[#8b949e] mb-4 max-w-3xl">{container.description}</p>
+          )}
 
           {/* Action buttons */}
-          <div className="flex items-center gap-3 mt-4">
-            <button className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-md text-sm border border-gray-600">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
-              Star
+          <div className="flex items-center gap-3 mb-4">
+            <button className="flex items-center gap-2 px-4 py-1.5 text-sm bg-[#21262d] hover:bg-[#30363d] border border-[#363b42] rounded-md transition">
+              <span>⛓️</span> Verify
             </button>
-            <button className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-md text-sm border border-gray-600">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-              </svg>
-              Fork
+            <button className="flex items-center gap-2 px-4 py-1.5 text-sm bg-emerald-600 hover:bg-emerald-700 rounded-md transition text-white font-medium">
+              <span>💉</span> Inject
             </button>
-            <div className="flex-1" />
-            <button className="flex items-center gap-2 px-4 py-1.5 bg-green-600 hover:bg-green-500 rounded-md text-sm font-medium">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Clone
+            <button className="flex items-center gap-2 px-4 py-1.5 text-sm bg-[#21262d] hover:bg-[#30363d] border border-[#363b42] rounded-md transition">
+              <span>👁</span> Watch
             </button>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                onClick={() => navigator.clipboard.writeText(container.id)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-[#21262d] hover:bg-[#30363d] border border-[#363b42] rounded-md transition"
+                title="Copy container ID"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <code className="text-xs text-[#8b949e]">{container.id}</code>
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-800">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex gap-4">
-            <Tab active={activeTab === 'files'} onClick={() => setActiveTab('files')}>
-              <span className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                </svg>
-                Files
-              </span>
-            </Tab>
-            <Tab active={activeTab === 'commits'} onClick={() => setActiveTab('commits')}>
-              <span className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {container.stats.commits} Commits
-              </span>
-            </Tab>
-            <Tab active={activeTab === 'contributors'} onClick={() => setActiveTab('contributors')}>
-              <span className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-                {container.stats.contributors} Contributors
-              </span>
-            </Tab>
-            <Tab active={activeTab === 'settings'} onClick={() => setActiveTab('settings')}>
-              <span className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                Settings
-              </span>
-            </Tab>
-          </div>
-        </div>
-      </div>
-
-      {/* Main content */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* File browser */}
-          <div className="lg:col-span-3">
-            {/* Branch selector and last commit */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <button className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 rounded-md text-sm border border-gray-600">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  {container.defaultBranch}
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                
-                {currentPath.length > 0 && (
-                  <div className="flex items-center gap-1 text-sm">
-                    <button 
-                      onClick={() => setCurrentPath([])}
-                      className="text-blue-400 hover:underline"
-                    >
-                      {container.id.split(':').pop()}
-                    </button>
-                    {currentPath.map((segment, i) => (
-                      <span key={i} className="flex items-center gap-1">
-                        <span className="text-gray-500">/</span>
-                        <button
-                          onClick={() => setCurrentPath(currentPath.slice(0, i + 1))}
-                          className={i === currentPath.length - 1 ? 'font-semibold' : 'text-blue-400 hover:underline'}
-                        >
-                          {segment}
-                        </button>
-                      </span>
-                    ))}
-                  </div>
+          {/* ── Tab Navigation ─────────────────────────── */}
+          <nav className="flex gap-0 -mb-px overflow-x-auto">
+            {[
+              { key: 'data', label: 'Data', icon: '📊', count: container.stats.totalAtoms },
+              { key: 'history', label: 'History', icon: '📜', count: container.commits?.length || container.version },
+              { key: 'chain', label: 'Chain', icon: '⛓️', count: container.chainAnchor ? 1 : 0 },
+              { key: 'schema', label: 'Schema', icon: '📐' },
+              { key: 'settings', label: 'Settings', icon: '⚙️' },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as any)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition whitespace-nowrap ${
+                  activeTab === tab.key
+                    ? 'border-orange-500 text-white bg-[#161b22]'
+                    : 'border-transparent text-[#8b949e] hover:text-[#c9d1d9] hover:border-[#30363d]'
+                }`}
+              >
+                <span>{tab.icon}</span>
+                {tab.label}
+                {tab.count !== undefined && tab.count > 0 && (
+                  <span className="ml-1 px-2 py-0.5 text-xs rounded-full bg-[#30363d] text-[#8b949e]">
+                    {tab.count.toLocaleString()}
+                  </span>
                 )}
-              </div>
+              </button>
+            ))}
+          </nav>
+        </div>
+      </div>
 
-              <div className="flex items-center gap-2">
-                <button className="px-3 py-1.5 text-sm text-gray-400 hover:text-white">
-                  Go to file
-                </button>
-                <button className="px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded-md text-sm font-medium">
-                  Add file
-                </button>
-              </div>
-            </div>
+      {/* ════════════════════════════════════════════════════
+          MAIN CONTENT
+          ════════════════════════════════════════════════════ */}
+      <div className="max-w-[1280px] mx-auto px-6 py-6">
+        <div className="flex gap-8">
 
-            {/* Last commit info */}
-            <div className="flex items-center gap-3 px-4 py-3 bg-gray-800/50 rounded-t-lg border border-gray-700">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-xs font-bold">
-                {container.lastCommit.author.charAt(0).toUpperCase()}
-              </div>
-              <span className="font-medium text-sm">{container.lastCommit.author}</span>
-              <span className="text-gray-400 text-sm flex-1 truncate">{container.lastCommit.message}</span>
-              <span className="text-gray-500 text-sm">{container.lastCommit.hash}</span>
-              <span className="text-gray-500 text-sm">{formatDate(container.lastCommit.date)}</span>
-            </div>
+          {/* ── Main Area (3/4) ─────────────────────────── */}
+          <div className="flex-1 min-w-0">
 
-            {/* File list */}
-            <div className="border border-t-0 border-gray-700 rounded-b-lg overflow-hidden">
-              {getCurrentFiles().map((file, index) => (
-                <div
-                  key={file.path}
-                  className={`flex items-center gap-3 px-4 py-2 hover:bg-gray-800/50 cursor-pointer ${
-                    index !== getCurrentFiles().length - 1 ? 'border-b border-gray-800' : ''
-                  }`}
-                  onClick={() => {
-                    if (file.type === 'directory') {
-                      setCurrentPath([...currentPath, file.name]);
-                    }
-                  }}
-                >
-                  <FileIcon type={file.type} name={file.name} />
-                  <span className={`flex-1 text-sm ${file.type === 'directory' ? 'text-blue-400' : 'text-gray-200'}`}>
-                    {file.name}
+            {/* ═══ DATA TAB ═══ */}
+            {activeTab === 'data' && (
+              <div>
+                {/* Version selector + stats bar */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-[#21262d] border border-[#363b42] rounded-md">
+                    <svg className="w-4 h-4 text-[#8b949e]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                    <select
+                      value={selectedVersion}
+                      onChange={(e) => setSelectedVersion(e.target.value)}
+                      className="bg-transparent text-sm text-white focus:outline-none cursor-pointer"
+                    >
+                      <option value="latest">v{container.version} (latest)</option>
+                      {Array.from({ length: container.version - 1 }, (_, i) => container.version - 1 - i).map(v => (
+                        <option key={v} value={`v${v}`}>v{v}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <span className="text-sm text-[#8b949e]">
+                    {container.stats.totalAtoms.toLocaleString()} atoms across {container.stats.categories} categories
                   </span>
-                  <span className="text-gray-500 text-sm truncate max-w-[200px]">
-                    {file.lastCommit?.message}
-                  </span>
-                  <span className="text-gray-500 text-sm w-24 text-right">
-                    {formatDate(file.lastCommit?.date || '')}
-                  </span>
+
+                  {container.etim && (
+                    <span className="ml-auto px-3 py-1 text-xs rounded-full bg-blue-900/30 text-blue-400 border border-blue-800">
+                      ETIM {container.etim.class_code} &middot; {container.etim.class_name}
+                    </span>
+                  )}
                 </div>
-              ))}
-            </div>
 
-            {/* README */}
-            {currentPath.length === 0 && container.readme && (
-              <div className="mt-6 border border-gray-700 rounded-lg">
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-700 bg-gray-800/50">
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                {/* Two-column: File tree + Content */}
+                <div className="flex gap-0 border border-[#30363d] rounded-lg overflow-hidden">
+
+                  {/* ── File Tree (sidebar) ──────────────── */}
+                  <div className="w-64 flex-shrink-0 bg-[#0d1117] border-r border-[#30363d]">
+                    <div className="sticky top-16">
+                      <div className="px-3 py-2 border-b border-[#21262d]">
+                        <input
+                          type="text"
+                          placeholder="Go to file..."
+                          className="w-full bg-[#0d1117] border border-[#30363d] rounded-md px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
+                        />
+                      </div>
+                      <div className="max-h-[calc(100vh-280px)] overflow-y-auto">
+                        {container.files.map((file) => (
+                          <button
+                            key={file.path}
+                            onClick={() => { setSelectedFile(file); setSearchAtoms(''); setExpandedAtom(null); }}
+                            className={`w-full text-left px-3 py-1.5 flex items-center gap-2 text-sm transition ${
+                              selectedFile?.path === file.path
+                                ? 'bg-[#161b22] text-white'
+                                : 'text-[#8b949e] hover:bg-[#161b22] hover:text-[#c9d1d9]'
+                            }`}
+                          >
+                            <svg className="w-4 h-4 text-[#8b949e] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span className="truncate flex-1">{file.name}</span>
+                            <span className="text-xs text-[#484f58] flex-shrink-0">{file.atoms.length}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── File Content (main) ──────────────── */}
+                  <div className="flex-1 min-w-0 bg-[#0d1117]">
+                    {selectedFile ? (
+                      <>
+                        {/* File header */}
+                        <div className="px-4 py-3 border-b border-[#21262d] bg-[#161b22] flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="font-mono text-sm font-medium text-white">{selectedFile.name}</span>
+                            <span className="text-xs text-[#484f58]">{selectedFile.atoms.length} values</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              placeholder="Filter fields..."
+                              value={searchAtoms}
+                              onChange={(e) => setSearchAtoms(e.target.value)}
+                              className="bg-[#0d1117] border border-[#30363d] rounded-md px-2 py-1 text-xs w-48 focus:border-blue-500 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Atoms table */}
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="text-xs text-[#8b949e] border-b border-[#21262d]">
+                                <th className="text-left px-4 py-2 font-medium">Field</th>
+                                <th className="text-left px-4 py-2 font-medium">Value</th>
+                                <th className="text-left px-4 py-2 font-medium">Unit</th>
+                                <th className="text-left px-4 py-2 font-medium">Source</th>
+                                <th className="text-left px-4 py-2 font-medium">Trust</th>
+                                <th className="text-left px-4 py-2 font-medium">Citation</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filteredAtoms.map((atom, idx) => {
+                                const trust = trustConfig[atom.trust] || trustConfig.community;
+                                const isExpanded = expandedAtom === idx;
+                                return (
+                                  <tr
+                                    key={idx}
+                                    onClick={() => setExpandedAtom(isExpanded ? null : idx)}
+                                    className={`border-b border-[#21262d] cursor-pointer transition ${
+                                      isExpanded ? 'bg-[#161b22]' : 'hover:bg-[#161b22]/50'
+                                    }`}
+                                  >
+                                    <td className="px-4 py-2">
+                                      <div className="font-medium text-[#e6edf3]">{atom.name || atom.field}</div>
+                                      {atom.name && atom.field !== atom.name && (
+                                        <div className="text-xs text-[#484f58] font-mono">{atom.field}</div>
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-2">
+                                      <code className="text-blue-400 text-sm">{String(atom.value)}</code>
+                                    </td>
+                                    <td className="px-4 py-2 text-[#8b949e] text-xs">{atom.unit || '—'}</td>
+                                    <td className="px-4 py-2">
+                                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs border ${sourceColors[atom.source] || 'bg-gray-800 text-gray-400 border-gray-700'}`}>
+                                        {atom.source.replace(/_/g, ' ')}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-2">
+                                      <div className="flex items-center gap-1.5">
+                                        <div className={`w-2 h-2 rounded-full ${trust.dot}`}></div>
+                                        <span className={`text-xs ${trust.text}`}>{trust.label}</span>
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-2">
+                                      {atom.citation ? (
+                                        <div className="flex items-center gap-2">
+                                          <span className={`text-xs font-mono ${
+                                            atom.citation.confidence >= 0.9 ? 'text-green-400' :
+                                            atom.citation.confidence >= 0.7 ? 'text-yellow-400' :
+                                            'text-orange-400'
+                                          }`}>
+                                            {(atom.citation.confidence * 100).toFixed(0)}%
+                                          </span>
+                                          <span className="text-xs text-[#484f58] truncate max-w-[120px]" title={atom.citation.document}>
+                                            {atom.citation.document.split(':').pop()}
+                                          </span>
+                                        </div>
+                                      ) : (
+                                        <span className="text-[#30363d]">—</span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {filteredAtoms.length === 0 && (
+                          <div className="text-center py-12 text-[#484f58]">
+                            No matching fields
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center py-16 text-[#484f58]">
+                        Select a file to view its contents
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ═══ HISTORY TAB ═══ */}
+            {activeTab === 'history' && (
+              <div>
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-[#8b949e]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span className="font-medium text-sm">README.md</span>
+                  Version History
+                </h2>
+
+                <div className="border border-[#30363d] rounded-lg overflow-hidden">
+                  {/* Current version */}
+                  {container.layers.map((layer, idx) => (
+                    <div key={idx} className="px-4 py-4 border-b border-[#21262d] hover:bg-[#161b22] transition">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-blue-500 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                          {layer.contributor_id.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-white text-sm">{layer.name}</span>
+                            <span className="text-xs text-[#484f58]">by {layer.contributor_id}</span>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-[#8b949e]">
+                            <span className={`px-2 py-0.5 rounded border ${sourceColors[layer.type] || 'bg-gray-800 border-gray-700'}`}>
+                              {layer.type}
+                            </span>
+                            <span>{layer.atom_count} atoms</span>
+                            <span className="flex items-center gap-1">
+                              <div className={`w-1.5 h-1.5 rounded-full ${trustConfig[layer.trust_level]?.dot || 'bg-gray-500'}`}></div>
+                              {layer.trust_level}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <div className="text-xs font-mono text-[#484f58] bg-[#0d1117] px-2 py-1 rounded">
+                            Layer {layer.id}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Version timeline */}
+                  <div className="px-4 py-4 bg-[#161b22]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-[#30363d] flex items-center justify-center text-sm">
+                        🏷️
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-white">v{container.version}</span>
+                        <span className="text-sm text-[#8b949e] ml-2">
+                          Current version &middot; {new Date(container.updatedAt).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {container.version > 1 && (
+                    <div className="px-4 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-[#30363d] flex items-center justify-center text-sm">
+                          🏷️
+                        </div>
+                        <div>
+                          <span className="text-sm font-medium text-[#8b949e]">v1</span>
+                          <span className="text-sm text-[#484f58] ml-2">
+                            Initial version &middot; {new Date(container.createdAt).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="p-6 prose prose-invert prose-sm max-w-none">
-                  <div dangerouslySetInnerHTML={{ __html: container.readme.replace(/\n/g, '<br/>') }} />
+              </div>
+            )}
+
+            {/* ═══ CHAIN TAB ═══ */}
+            {activeTab === 'chain' && (
+              <div>
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <span>⛓️</span> Blockchain Verification
+                </h2>
+
+                <div className="border border-[#30363d] rounded-lg overflow-hidden">
+                  {/* Chain status */}
+                  <div className="px-6 py-8 bg-gradient-to-r from-emerald-900/10 to-blue-900/10 text-center">
+                    <div className="text-5xl mb-4">{container.isVerified ? '✅' : '⏳'}</div>
+                    <h3 className="text-xl font-semibold mb-2">
+                      {container.isVerified ? 'Container Verified' : 'Pending Verification'}
+                    </h3>
+                    <p className="text-[#8b949e] text-sm">
+                      {container.isVerified
+                        ? 'This container is anchored on Base Mainnet. All data is cryptographically verifiable.'
+                        : 'This container has not yet been anchored on-chain.'}
+                    </p>
+                  </div>
+
+                  {/* Chain details */}
+                  <div className="divide-y divide-[#21262d]">
+                    <div className="px-6 py-4 flex items-center justify-between">
+                      <span className="text-[#8b949e] text-sm">Network</span>
+                      <span className="text-sm font-mono">Base Mainnet</span>
+                    </div>
+                    <div className="px-6 py-4 flex items-center justify-between">
+                      <span className="text-[#8b949e] text-sm">Smart Contract</span>
+                      <a
+                        href="https://basescan.org/address/0xAd31465A5618Ffa27eC1f3c0056C2f5CC621aEc7"
+                        target="_blank"
+                        rel="noopener"
+                        className="text-sm font-mono text-blue-400 hover:underline"
+                      >
+                        0xAd31...1aEc7
+                      </a>
+                    </div>
+                    <div className="px-6 py-4 flex items-center justify-between">
+                      <span className="text-[#8b949e] text-sm">Container Hash</span>
+                      <span className="text-sm font-mono text-[#484f58]">
+                        {container.id.split(':').join('-').substring(0, 16)}...
+                      </span>
+                    </div>
+                    <div className="px-6 py-4 flex items-center justify-between">
+                      <span className="text-[#8b949e] text-sm">Atoms Hashed</span>
+                      <span className="text-sm">{container.stats.totalAtoms.toLocaleString()}</span>
+                    </div>
+                    <div className="px-6 py-4 flex items-center justify-between">
+                      <span className="text-[#8b949e] text-sm">Proof Type</span>
+                      <span className="text-sm">Merkle Tree (SHA-256)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ═══ SCHEMA TAB ═══ */}
+            {activeTab === 'schema' && (
+              <div>
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <span>📐</span> Container Schema
+                </h2>
+
+                <div className="border border-[#30363d] rounded-lg overflow-hidden">
+                  {/* Schema header */}
+                  <div className="px-4 py-3 bg-[#161b22] border-b border-[#21262d] flex items-center gap-2">
+                    <svg className="w-4 h-4 text-[#8b949e]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span className="text-sm font-medium">manifest.json</span>
+                  </div>
+
+                  <pre className="p-4 text-sm font-mono overflow-x-auto bg-[#0d1117]">
+                    <code className="text-[#c9d1d9]">{JSON.stringify({
+                      "$schema": "https://gitchain.0711.io/schemas/container/v1",
+                      "id": container.id,
+                      "type": container.type,
+                      "version": container.version,
+                      "identity": {
+                        snr: container.snr,
+                        manufacturer: container.manufacturer,
+                        ...(container.etim ? { etim_class: container.etim.class_code, etim_name: container.etim.class_name } : {}),
+                      },
+                      "layers": container.layers.map(l => ({
+                        id: l.id,
+                        name: l.name,
+                        type: l.type,
+                        contributor: l.contributor_id,
+                        trust: l.trust_level,
+                        atoms: l.atom_count,
+                      })),
+                      "stats": {
+                        total_atoms: container.stats.totalAtoms,
+                        categories: container.stats.categories,
+                        contributors: container.contributors.length,
+                      }
+                    }, null, 2)}</code>
+                  </pre>
+                </div>
+
+                {/* Category breakdown */}
+                <h3 className="text-md font-semibold mt-6 mb-3">Data Categories</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {container.files.map((file) => (
+                    <div key={file.path} className="border border-[#30363d] rounded-lg p-3 hover:border-[#484f58] transition">
+                      <div className="flex items-center gap-2 mb-1">
+                        <svg className="w-4 h-4 text-[#8b949e]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span className="text-sm font-medium">{file.name}</span>
+                      </div>
+                      <div className="text-xs text-[#484f58]">{file.atoms.length} fields</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ═══ SETTINGS TAB ═══ */}
+            {activeTab === 'settings' && (
+              <div>
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <span>⚙️</span> Container Settings
+                </h2>
+
+                <div className="space-y-6">
+                  {/* General */}
+                  <div className="border border-[#30363d] rounded-lg p-6">
+                    <h3 className="font-medium mb-4">General</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm text-[#8b949e] mb-1">Container Name</label>
+                        <input
+                          type="text"
+                          defaultValue={container.name}
+                          className="w-full bg-[#0d1117] border border-[#30363d] rounded-md px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-[#8b949e] mb-1">Description</label>
+                        <textarea
+                          defaultValue={container.description}
+                          rows={3}
+                          className="w-full bg-[#0d1117] border border-[#30363d] rounded-md px-3 py-2 text-sm focus:border-blue-500 focus:outline-none resize-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Visibility */}
+                  <div className="border border-[#30363d] rounded-lg p-6">
+                    <h3 className="font-medium mb-4">Visibility</h3>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 px-4 py-3 border border-emerald-600 bg-emerald-900/10 rounded-lg cursor-pointer">
+                        <input type="radio" name="visibility" value="public" defaultChecked className="text-emerald-500" />
+                        <div>
+                          <div className="text-sm font-medium">Public</div>
+                          <div className="text-xs text-[#8b949e]">Anyone can view and inject this container</div>
+                        </div>
+                      </label>
+                      <label className="flex items-center gap-2 px-4 py-3 border border-[#30363d] rounded-lg cursor-pointer hover:border-[#484f58]">
+                        <input type="radio" name="visibility" value="private" className="text-emerald-500" />
+                        <div>
+                          <div className="text-sm font-medium">Private</div>
+                          <div className="text-xs text-[#8b949e]">Only authorized users can access</div>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Danger zone */}
+                  <div className="border border-red-900/50 rounded-lg p-6">
+                    <h3 className="font-medium text-red-400 mb-4">Danger Zone</h3>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-medium">Delete this container</div>
+                        <div className="text-xs text-[#8b949e]">Once deleted, this cannot be undone.</div>
+                      </div>
+                      <button className="px-4 py-1.5 text-sm text-red-400 border border-red-900/50 rounded-md hover:bg-red-900/20 transition">
+                        Delete container
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* About */}
-            <div>
-              <h3 className="font-semibold mb-3">About</h3>
-              <p className="text-sm text-gray-400 mb-4">{container.description}</p>
-              
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-gray-400">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                  </svg>
-                  <code className="text-blue-400">{container.id}</code>
-                </div>
-                <div className="flex items-center gap-2 text-gray-400">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* ── Sidebar (1/4) ──────────────────────────── */}
+          <div className="w-80 flex-shrink-0 hidden lg:block">
+            <div className="space-y-6">
+
+              {/* About */}
+              <div>
+                <h3 className="text-sm font-semibold mb-3 text-[#8b949e]">About</h3>
+                <p className="text-sm text-[#c9d1d9] mb-3">{container.description || 'No description provided.'}</p>
+                {container.etim && (
+                  <div className="flex items-center gap-2 text-sm mb-2">
+                    <span className="text-[#8b949e]">ETIM:</span>
+                    <span className="text-blue-400">{container.etim.class_code}</span>
+                    <span className="text-[#484f58]">{container.etim.class_name}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-sm mb-2">
+                  <svg className="w-4 h-4 text-[#8b949e]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                   </svg>
-                  <span>Version {container.version}</span>
+                  <span className="text-[#8b949e]">Version {container.version}</span>
                 </div>
-                <div className="flex items-center gap-2 text-gray-400">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                <div className="flex items-center gap-2 text-sm mb-2">
+                  <svg className="w-4 h-4 text-[#8b949e]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <span className="text-green-400">Blockchain verified</span>
+                  <span className="text-[#8b949e]">{new Date(container.createdAt).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                 </div>
               </div>
-            </div>
 
-            {/* Contributors */}
-            <div>
-              <h3 className="font-semibold mb-3">Contributors</h3>
-              <div className="space-y-2">
-                {['bosch', 'etim-international', 'bombas@0711.io'].map((contributor) => (
-                  <div key={contributor} className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-xs font-bold">
-                      {contributor.charAt(0).toUpperCase()}
+              <hr className="border-[#21262d]" />
+
+              {/* Trust Breakdown */}
+              <div>
+                <h3 className="text-sm font-semibold mb-3 text-[#8b949e]">Trust Distribution</h3>
+                <div className="space-y-2">
+                  {Object.entries(totalTrustBreakdown).sort((a, b) => b[1] - a[1]).map(([trust, count]) => {
+                    const tc = trustConfig[trust] || trustConfig.community;
+                    const pct = ((count / container.stats.totalAtoms) * 100).toFixed(0);
+                    return (
+                      <div key={trust} className="flex items-center gap-2">
+                        <div className={`w-2.5 h-2.5 rounded-full ${tc.dot}`}></div>
+                        <span className="text-xs text-[#8b949e] flex-1">{tc.label}</span>
+                        <div className="w-24 h-1.5 bg-[#21262d] rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${tc.dot}`} style={{ width: `${pct}%` }}></div>
+                        </div>
+                        <span className="text-xs text-[#484f58] w-8 text-right">{pct}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <hr className="border-[#21262d]" />
+
+              {/* Layers */}
+              <div>
+                <h3 className="text-sm font-semibold mb-3 text-[#8b949e]">
+                  Layers
+                  <span className="ml-2 text-xs font-normal text-[#484f58]">{container.layers.length}</span>
+                </h3>
+                <div className="space-y-2">
+                  {container.layers.map((layer, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <div className={`w-2.5 h-2.5 rounded-full ${trustConfig[layer.trust_level]?.dot || 'bg-gray-500'}`}></div>
+                      <span className="text-sm flex-1 truncate">{layer.name}</span>
+                      <span className="text-xs text-[#484f58]">{layer.atom_count}</span>
                     </div>
-                    <span className="text-sm text-gray-300">{contributor}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Languages/Types */}
-            <div>
-              <h3 className="font-semibold mb-3">Content Types</h3>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                  <span className="text-sm text-gray-300">JSON</span>
-                  <span className="text-sm text-gray-500">68%</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-400" />
-                  <span className="text-sm text-gray-300">PDF</span>
-                  <span className="text-sm text-gray-500">24%</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-gray-400" />
-                  <span className="text-sm text-gray-300">Markdown</span>
-                  <span className="text-sm text-gray-500">8%</span>
+                  ))}
                 </div>
               </div>
-            </div>
 
-            {/* Clone box */}
-            <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-              <h4 className="font-medium text-sm mb-2">Clone this container</h4>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={`gitchain clone ${container.id}`}
-                  className="flex-1 px-3 py-2 bg-gray-900 border border-gray-600 rounded text-sm font-mono text-gray-300"
-                />
-                <button className="p-2 hover:bg-gray-700 rounded">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                </button>
+              <hr className="border-[#21262d]" />
+
+              {/* Contributors */}
+              <div>
+                <h3 className="text-sm font-semibold mb-3 text-[#8b949e]">
+                  Contributors
+                  <span className="ml-2 text-xs font-normal text-[#484f58]">{container.contributors.length}</span>
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {container.contributors.map((c, idx) => (
+                    <div key={idx} className="flex items-center gap-2 px-2 py-1 bg-[#161b22] rounded-full border border-[#21262d]">
+                      <div className="w-5 h-5 rounded-full bg-gradient-to-br from-emerald-500 to-blue-500 flex items-center justify-center text-[10px] font-bold">
+                        {c.contributor_id.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-xs">{c.contributor_id}</span>
+                      <span className="text-xs text-[#484f58]">{c.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <hr className="border-[#21262d]" />
+
+              {/* Inject snippet */}
+              <div>
+                <h3 className="text-sm font-semibold mb-3 text-[#8b949e]">Quick Inject</h3>
+                <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-3">
+                  <pre className="text-xs font-mono text-[#8b949e] overflow-x-auto">
+{`const ctx = await inject({
+  containers: ["${container.id}"],
+  verify: true
+});`}
+                  </pre>
+                </div>
               </div>
             </div>
           </div>
