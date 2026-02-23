@@ -33,13 +33,13 @@ interface ContainerData {
 
 const trustColors: Record<string, { bg: string; text: string }> = {
   highest: { bg: 'bg-green-900/30', text: 'text-green-400' },
-  high: { bg: 'bg-blue-900/30', text: 'text-blue-400' },
+  high: { bg: 'bg-blue-100', text: 'text-blue-400' },
   certified: { bg: 'bg-indigo-900/30', text: 'text-indigo-400' },
   verified: { bg: 'bg-cyan-900/30', text: 'text-cyan-400' },
   medium: { bg: 'bg-yellow-900/30', text: 'text-yellow-400' },
   customer: { bg: 'bg-purple-900/30', text: 'text-purple-400' },
   generated: { bg: 'bg-orange-900/30', text: 'text-orange-400' },
-  community: { bg: 'bg-gray-800', text: 'text-gray-400' },
+  community: { bg: 'bg-gray-50', text: 'text-gray-600' },
 };
 
 export default function FileViewPage({ 
@@ -74,18 +74,18 @@ export default function FileViewPage({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
-        <div className="animate-pulse text-gray-400">Loading...</div>
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="animate-pulse text-gray-600">Loading...</div>
       </div>
     );
   }
 
   if (error || !container) {
     return (
-      <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-400 mb-4">{error || 'Container not found'}</p>
-          <Link href="/containers" className="text-emerald-400 hover:underline">
+          <Link href="/containers" className="text-emerald-600 hover:underline">
             Back to containers
           </Link>
         </div>
@@ -98,11 +98,11 @@ export default function FileViewPage({
   
   if (!file) {
     return (
-      <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-4">📄</div>
-          <p className="text-gray-400 mb-4">File not found: {filePath}</p>
-          <Link href={`/containers/${encodeURIComponent(containerId)}`} className="text-emerald-400 hover:underline">
+          <p className="text-gray-600 mb-4">File not found: {filePath}</p>
+          <Link href={`/containers/${encodeURIComponent(containerId)}`} className="text-emerald-600 hover:underline">
             Back to container
           </Link>
         </div>
@@ -130,24 +130,24 @@ export default function FileViewPage({
   const citedAtoms = file.atoms.filter(a => a.citation);
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-white">
+    <div className="min-h-screen bg-gray-100 text-gray-900">
       {/* Header */}
-      <div className="border-b border-gray-800">
+      <div className="border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-4">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-sm">
             <Link href="/containers" className="text-blue-400 hover:underline">
               containers
             </Link>
-            <span className="text-gray-500">/</span>
+            <span className="text-gray-600">/</span>
             <Link href={`/namespaces/${container.namespace}`} className="text-blue-400 hover:underline">
               {container.namespace}
             </Link>
-            <span className="text-gray-500">/</span>
+            <span className="text-gray-600">/</span>
             <Link href={`/containers/${encodeURIComponent(containerId)}`} className="text-blue-400 hover:underline">
               {container.identifier}
             </Link>
-            <span className="text-gray-500">/</span>
+            <span className="text-gray-600">/</span>
             <span className="font-semibold">{file.name}</span>
           </div>
         </div>
@@ -160,7 +160,7 @@ export default function FileViewPage({
           <div className="flex items-center gap-4">
             <span className="text-xl">📄</span>
             <span className="font-medium">{file.name}</span>
-            <div className="flex items-center gap-2 text-sm text-gray-400">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
               <span>{file.atoms.length} fields</span>
               <span>•</span>
               <span>{lines.length} lines</span>
@@ -172,21 +172,21 @@ export default function FileViewPage({
               onClick={() => setShowRaw(!showRaw)}
               className={`px-3 py-1.5 text-sm rounded-md border ${
                 showRaw 
-                  ? 'bg-gray-700 border-gray-600' 
-                  : 'border-gray-600 hover:bg-gray-800'
+                  ? 'bg-gray-200 border-gray-300' 
+                  : 'border-gray-300 hover:bg-gray-50'
               }`}
             >
               {showRaw ? 'Formatted' : 'Raw'}
             </button>
             <Link
               href={`/containers/${encodeURIComponent(containerId)}/history`}
-              className="px-3 py-1.5 text-sm rounded-md border border-gray-600 hover:bg-gray-800"
+              className="px-3 py-1.5 text-sm rounded-md border border-gray-300 hover:bg-gray-50"
             >
               History
             </Link>
             <button 
               onClick={() => navigator.clipboard.writeText(fileContent)}
-              className="p-2 rounded-md border border-gray-600 hover:bg-gray-800"
+              className="p-2 rounded-md border border-gray-300 hover:bg-gray-50"
               title="Copy"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -197,23 +197,23 @@ export default function FileViewPage({
         </div>
 
         {/* Version info */}
-        <div className="flex items-center gap-3 px-4 py-3 bg-gray-800/50 rounded-t-lg border border-gray-700">
-          <span className="text-sm text-gray-400">Version</span>
+        <div className="flex items-center gap-3 px-4 py-3 bg-gray-50/50 rounded-t-lg border border-gray-300">
+          <span className="text-sm text-gray-600">Version</span>
           <span className="font-mono text-sm">v{container.version}</span>
-          <span className="text-gray-500">•</span>
-          <span className="text-sm text-gray-400">Container ID:</span>
-          <code className="text-xs text-gray-500">{containerId}</code>
+          <span className="text-gray-600">•</span>
+          <span className="text-sm text-gray-600">Container ID:</span>
+          <code className="text-xs text-gray-600">{containerId}</code>
         </div>
 
         {/* File content */}
-        <div className="border border-t-0 border-gray-700 rounded-b-lg overflow-hidden">
+        <div className="border border-t-0 border-gray-300 rounded-b-lg overflow-hidden">
           {/* Code view */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm font-mono">
               <tbody>
                 {lines.map((line, index) => (
-                  <tr key={index} className="hover:bg-gray-800/30">
-                    <td className="px-4 py-0.5 text-right text-gray-500 select-none border-r border-gray-800 w-12">
+                  <tr key={index} className="hover:bg-gray-50/30">
+                    <td className="px-4 py-0.5 text-right text-gray-600 select-none border-r border-gray-200 w-12">
                       {index + 1}
                     </td>
                     <td className="px-4 py-0.5 whitespace-pre">
@@ -238,8 +238,8 @@ export default function FileViewPage({
 
         {/* Citations panel */}
         {citedAtoms.length > 0 && (
-          <div className="mt-6 border border-gray-700 rounded-lg">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-700 bg-gray-800/50">
+          <div className="mt-6 border border-gray-300 rounded-lg">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-300 bg-gray-50/50">
               <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -249,7 +249,7 @@ export default function FileViewPage({
               </span>
             </div>
             
-            <div className="divide-y divide-gray-800">
+            <div className="divide-y divide-gray-200">
               {citedAtoms.slice(0, 10).map((atom, i) => {
                 const trust = trustColors[atom.trust] || trustColors.community;
                 return (
@@ -257,17 +257,17 @@ export default function FileViewPage({
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <code className="text-purple-400 text-sm">{atom.name || atom.field}</code>
-                        <span className="text-gray-500">=</span>
+                        <span className="text-gray-600">=</span>
                         <code className="text-blue-400 text-sm">{String(atom.value)}{atom.unit ? ` ${atom.unit}` : ''}</code>
                       </div>
                       {atom.citation && (
                         <>
-                          <div className="text-sm text-gray-400">
-                            <span className="text-gray-500">Source:</span> {atom.citation.document}
+                          <div className="text-sm text-gray-600">
+                            <span className="text-gray-600">Source:</span> {atom.citation.document}
                             {atom.citation.page && ` (page ${atom.citation.page})`}
                           </div>
                           {atom.citation.excerpt && (
-                            <div className="text-sm text-gray-500 italic mt-1">
+                            <div className="text-sm text-gray-600 italic mt-1">
                               "{atom.citation.excerpt}"
                             </div>
                           )}
@@ -292,7 +292,7 @@ export default function FileViewPage({
                 );
               })}
               {citedAtoms.length > 10 && (
-                <div className="px-4 py-3 text-sm text-gray-500">
+                <div className="px-4 py-3 text-sm text-gray-600">
                   + {citedAtoms.length - 10} more citations
                 </div>
               )}
@@ -304,7 +304,7 @@ export default function FileViewPage({
         <div className="mt-6">
           <Link
             href={`/containers/${encodeURIComponent(containerId)}`}
-            className="text-sm text-gray-400 hover:text-white transition flex items-center gap-1"
+            className="text-sm text-gray-600 hover:text-gray-900 transition flex items-center gap-1"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

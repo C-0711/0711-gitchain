@@ -20,7 +20,7 @@ export default function VerifyBadge({
   if (!verified) {
     return (
       <span
-        className={"rounded-full bg-gray-700 text-gray-400 " + sizeClasses[size]}
+        className={"rounded-full bg-gray-200 text-gray-600 " + sizeClasses[size]}
       >
         Unverified
       </span>
@@ -30,7 +30,7 @@ export default function VerifyBadge({
   return (
     <span
       className={
-        "rounded-full bg-emerald-900/30 text-emerald-400 border border-emerald-700 " +
+        "rounded-full bg-emerald-100 text-emerald-600 border border-emerald-300 " +
         sizeClasses[size]
       }
       title={network && batchId ? "Batch " + batchId + " on " + network : undefined}

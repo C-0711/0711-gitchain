@@ -126,6 +126,14 @@ export async function GET(
       LIMIT 1
     `, [container.id]).catch(() => ({ rows: [] }));
 
+    // Get media files (images, PDFs, CAD)
+    const mediaFilesResult = await pool.query(`
+      SELECT id, filename, content_type, size, metadata, created_at
+      FROM container_files
+      WHERE container_id = $1
+      ORDER BY content_type, filename
+    `, [container.id]);
+
     const data = container.data || {};
     const anchor = anchorResult.rows[0];
 
@@ -148,6 +156,15 @@ export async function GET(
         class_name: data.etim_class_name || '',
       } : null),
       files: Object.values(files),
+      mediaFiles: mediaFilesResult.rows.map((f: any) => ({
+        id: f.id,
+        filename: f.filename,
+        contentType: f.content_type,
+        size: f.size,
+        type: f.metadata?.type || 'unknown',
+        description: f.metadata?.description || '',
+        usage: f.metadata?.usage || '',
+      })),
       layers: layersResult.rows,
       contributors: contributorsResult.rows,
       commits: commitsResult.rows.map((c: any) => ({
@@ -160,6 +177,7 @@ export async function GET(
       stats: {
         totalAtoms: atomsResult.rowCount || 0,
         categories: Object.keys(files).length,
+        mediaFiles: mediaFilesResult.rowCount || 0,
       },
       createdAt: container.created_at,
       updatedAt: container.updated_at,

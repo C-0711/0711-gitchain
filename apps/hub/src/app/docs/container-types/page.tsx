@@ -47,41 +47,41 @@ export default function ContainerTypesPage() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-12">
       <div className="mb-8">
-        <Link href="/docs" className="text-emerald-400 hover:underline text-sm">
+        <Link href="/docs" className="text-emerald-600 hover:underline text-sm">
           ← Back to Docs
         </Link>
         <h1 className="text-3xl font-bold mt-4 mb-4">Container Types</h1>
-        <p className="text-gray-400">
+        <p className="text-gray-600">
           GitChain supports five container types, each designed for specific use cases.
         </p>
       </div>
 
       <div className="space-y-8">
         {types.map((t) => (
-          <div key={t.type} className={`bg-gray-800/50 border border-gray-700 rounded-lg p-6`}>
+          <div key={t.type} className={`bg-gray-50/50 border border-gray-300 rounded-lg p-6`}>
             <div className="flex items-center gap-4 mb-4">
               <span className="text-4xl">{t.icon}</span>
               <div>
                 <h2 className="text-xl font-semibold capitalize">{t.type}</h2>
-                <code className="text-sm text-gray-400">0711:{t.type}:namespace:id:v1</code>
+                <code className="text-sm text-gray-600">0711:{t.type}:namespace:id:v1</code>
               </div>
             </div>
-            <p className="text-gray-400 mb-4">{t.description}</p>
+            <p className="text-gray-600 mb-4">{t.description}</p>
             
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <h3 className="text-sm font-semibold text-gray-300 mb-2">Example Use Cases</h3>
-                <ul className="text-sm text-gray-400 space-y-1">
+                <h3 className="text-sm font-semibold text-gray-600 mb-2">Example Use Cases</h3>
+                <ul className="text-sm text-gray-600 space-y-1">
                   {t.examples.map((ex) => (
                     <li key={ex}>• {ex}</li>
                   ))}
                 </ul>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-gray-300 mb-2">Common Fields</h3>
+                <h3 className="text-sm font-semibold text-gray-600 mb-2">Common Fields</h3>
                 <div className="flex flex-wrap gap-1">
                   {t.fields.map((field) => (
-                    <span key={field} className="px-2 py-0.5 bg-gray-700 rounded text-xs">
+                    <span key={field} className="px-2 py-0.5 bg-gray-200 rounded text-xs">
                       {field}
                     </span>
                   ))}
@@ -92,24 +92,24 @@ export default function ContainerTypesPage() {
         ))}
       </div>
 
-      <div className="mt-12 p-6 bg-gray-800/30 border border-gray-700 rounded-lg">
+      <div className="mt-12 p-6 bg-gray-50/30 border border-gray-300 rounded-lg">
         <h2 className="font-semibold mb-4">Container ID Format</h2>
-        <code className="text-emerald-400 text-lg">0711:{"{type}"}:{"{namespace}"}:{"{identifier}"}:{"{version}"}</code>
+        <code className="text-emerald-600 text-lg">0711:{"{type}"}:{"{namespace}"}:{"{identifier}"}:{"{version}"}</code>
         <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div>
-            <span className="text-gray-400">type</span>
+            <span className="text-gray-600">type</span>
             <p>product, campaign, project, memory, knowledge</p>
           </div>
           <div>
-            <span className="text-gray-400">namespace</span>
+            <span className="text-gray-600">namespace</span>
             <p>Your organization or project name</p>
           </div>
           <div>
-            <span className="text-gray-400">identifier</span>
+            <span className="text-gray-600">identifier</span>
             <p>Unique ID within namespace</p>
           </div>
           <div>
-            <span className="text-gray-400">version</span>
+            <span className="text-gray-600">version</span>
             <p>v1, v2, v3... or "latest"</p>
           </div>
         </div>

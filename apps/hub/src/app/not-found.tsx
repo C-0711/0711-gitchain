@@ -6,10 +6,10 @@ export default function NotFound() {
       <div className="text-center">
         <div className="text-8xl mb-6">🔍</div>
         <h1 className="text-4xl font-bold mb-4">404</h1>
-        <h2 className="text-xl text-gray-400 mb-8">
+        <h2 className="text-xl text-gray-600 mb-8">
           This is not the container you&apos;re looking for
         </h2>
-        <p className="text-gray-500 mb-8 max-w-md">
+        <p className="text-gray-600 mb-8 max-w-md">
           The page you requested could not be found. It may have been moved, deleted,
           or never existed in the first place.
         </p>
@@ -22,7 +22,7 @@ export default function NotFound() {
           </Link>
           <Link
             href="/containers"
-            className="px-6 py-3 border border-gray-700 hover:border-gray-500 rounded-lg transition"
+            className="px-6 py-3 border border-gray-300 hover:border-gray-500 rounded-lg transition"
           >
             Browse Containers
           </Link>

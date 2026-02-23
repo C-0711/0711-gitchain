@@ -4,11 +4,11 @@ export default function InjectAPIPage() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-12">
       <div className="mb-8">
-        <Link href="/docs" className="text-emerald-400 hover:underline text-sm">
+        <Link href="/docs" className="text-emerald-600 hover:underline text-sm">
           ← Back to Docs
         </Link>
         <h1 className="text-3xl font-bold mt-4 mb-4">Inject API</h1>
-        <p className="text-gray-400">
+        <p className="text-gray-600">
           The core API for retrieving verified context from GitChain containers.
         </p>
       </div>
@@ -16,13 +16,13 @@ export default function InjectAPIPage() {
       <div className="space-y-8">
         <section>
           <h2 className="text-xl font-semibold mb-4">POST /api/inject</h2>
-          <p className="text-gray-400 mb-4">
+          <p className="text-gray-600 mb-4">
             Retrieve and format verified context from one or more containers.
           </p>
           
           <h3 className="font-semibold mt-6 mb-2">Request Body</h3>
-          <div className="bg-gray-900 rounded-lg p-4 mb-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`{
+          <div className="bg-white rounded-lg p-4 mb-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`{
   "containers": ["0711:product:acme:widget-001:v1"],
   "verify": true,
   "format": "markdown",
@@ -32,9 +32,9 @@ export default function InjectAPIPage() {
           </div>
 
           <h3 className="font-semibold mt-6 mb-2">Parameters</h3>
-          <div className="bg-gray-800/50 rounded-lg overflow-hidden">
+          <div className="bg-gray-50/50 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-gray-800">
+              <thead className="bg-gray-50">
                 <tr>
                   <th className="text-left px-4 py-2">Parameter</th>
                   <th className="text-left px-4 py-2">Type</th>
@@ -42,44 +42,44 @@ export default function InjectAPIPage() {
                   <th className="text-left px-4 py-2">Description</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-700">
+              <tbody className="divide-y divide-gray-200">
                 <tr>
-                  <td className="px-4 py-2 font-mono text-emerald-400">containers</td>
+                  <td className="px-4 py-2 font-mono text-emerald-600">containers</td>
                   <td className="px-4 py-2">string[]</td>
                   <td className="px-4 py-2">Yes</td>
-                  <td className="px-4 py-2 text-gray-400">Array of container IDs</td>
+                  <td className="px-4 py-2 text-gray-600">Array of container IDs</td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-2 font-mono text-emerald-400">verify</td>
+                  <td className="px-4 py-2 font-mono text-emerald-600">verify</td>
                   <td className="px-4 py-2">boolean</td>
                   <td className="px-4 py-2">No</td>
-                  <td className="px-4 py-2 text-gray-400">Verify blockchain proofs (default: true)</td>
+                  <td className="px-4 py-2 text-gray-600">Verify blockchain proofs (default: true)</td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-2 font-mono text-emerald-400">format</td>
+                  <td className="px-4 py-2 font-mono text-emerald-600">format</td>
                   <td className="px-4 py-2">string</td>
                   <td className="px-4 py-2">No</td>
-                  <td className="px-4 py-2 text-gray-400">markdown | json | yaml (default: markdown)</td>
+                  <td className="px-4 py-2 text-gray-600">markdown | json | yaml (default: markdown)</td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-2 font-mono text-emerald-400">includeCitations</td>
+                  <td className="px-4 py-2 font-mono text-emerald-600">includeCitations</td>
                   <td className="px-4 py-2">boolean</td>
                   <td className="px-4 py-2">No</td>
-                  <td className="px-4 py-2 text-gray-400">Include source citations (default: true)</td>
+                  <td className="px-4 py-2 text-gray-600">Include source citations (default: true)</td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-2 font-mono text-emerald-400">maxTokens</td>
+                  <td className="px-4 py-2 font-mono text-emerald-600">maxTokens</td>
                   <td className="px-4 py-2">number</td>
                   <td className="px-4 py-2">No</td>
-                  <td className="px-4 py-2 text-gray-400">Limit output tokens</td>
+                  <td className="px-4 py-2 text-gray-600">Limit output tokens</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
           <h3 className="font-semibold mt-6 mb-2">Response</h3>
-          <div className="bg-gray-900 rounded-lg p-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`{
+          <div className="bg-white rounded-lg p-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`{
   "success": true,
   "containers": [...],
   "formatted": "# Product: Smart Widget Pro\\n\\n...",
@@ -100,8 +100,8 @@ export default function InjectAPIPage() {
           <h2 className="text-xl font-semibold mb-4">SDK Usage</h2>
           
           <h3 className="font-semibold mt-4 mb-2">TypeScript</h3>
-          <div className="bg-gray-900 rounded-lg p-4 mb-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`import { inject } from "@0711/inject";
+          <div className="bg-white rounded-lg p-4 mb-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`import { inject } from "@0711/inject";
 
 const context = await inject({
   containers: ["0711:product:acme:widget-001:v1"],
@@ -120,8 +120,8 @@ const response = await openai.chat.completions.create({
           </div>
 
           <h3 className="font-semibold mt-4 mb-2">Python</h3>
-          <div className="bg-gray-900 rounded-lg p-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`from gitchain import inject
+          <div className="bg-white rounded-lg p-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`from gitchain import inject
 
 context = inject(
     containers=["0711:product:acme:widget-001:v1"],
@@ -143,17 +143,17 @@ response = openai.chat.completions.create(
         <section>
           <h2 className="text-xl font-semibold mb-4">Output Formats</h2>
           <div className="grid md:grid-cols-3 gap-4">
-            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+            <div className="bg-gray-50/50 border border-gray-300 rounded-lg p-4">
               <h3 className="font-semibold mb-2">Markdown</h3>
-              <p className="text-sm text-gray-400">Best for LLM prompts. Structured, readable, includes citations.</p>
+              <p className="text-sm text-gray-600">Best for LLM prompts. Structured, readable, includes citations.</p>
             </div>
-            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+            <div className="bg-gray-50/50 border border-gray-300 rounded-lg p-4">
               <h3 className="font-semibold mb-2">JSON</h3>
-              <p className="text-sm text-gray-400">Structured data. Best for programmatic access and processing.</p>
+              <p className="text-sm text-gray-600">Structured data. Best for programmatic access and processing.</p>
             </div>
-            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+            <div className="bg-gray-50/50 border border-gray-300 rounded-lg p-4">
               <h3 className="font-semibold mb-2">YAML</h3>
-              <p className="text-sm text-gray-400">Human-readable structured format. Good for config-style data.</p>
+              <p className="text-sm text-gray-600">Human-readable structured format. Good for config-style data.</p>
             </div>
           </div>
         </section>

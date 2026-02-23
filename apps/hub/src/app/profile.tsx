@@ -35,11 +35,11 @@ export default function ProfilePage() {
         <div className="flex-1">
           <div className="flex items-center gap-4 mb-2">
             <h1 className="text-2xl font-bold">{user.name}</h1>
-            <span className="text-gray-400">@{user.username}</span>
+            <span className="text-gray-600">@{user.username}</span>
           </div>
-          {user.bio && <p className="text-gray-400 mb-4">{user.bio}</p>}
+          {user.bio && <p className="text-gray-600 mb-4">{user.bio}</p>}
           
-          <div className="flex flex-wrap gap-4 text-sm text-gray-400">
+          <div className="flex flex-wrap gap-4 text-sm text-gray-600">
             {user.company && (
               <span className="flex items-center gap-1">
                 <span>🏢</span> {user.company}
@@ -51,7 +51,7 @@ export default function ProfilePage() {
               </span>
             )}
             {user.website && (
-              <a href={user.website} target="_blank" rel="noopener" className="flex items-center gap-1 text-emerald-400 hover:underline">
+              <a href={user.website} target="_blank" rel="noopener" className="flex items-center gap-1 text-emerald-600 hover:underline">
                 <span>🔗</span> {user.website.replace("https://", "")}
               </a>
             )}
@@ -61,7 +61,7 @@ export default function ProfilePage() {
           </div>
 
           <div className="flex gap-6 mt-4">
-            <Link href="/settings" className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg hover:border-gray-500 text-sm">
+            <Link href="/settings" className="px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg hover:border-gray-500 text-sm">
               Edit Profile
             </Link>
           </div>
@@ -70,22 +70,22 @@ export default function ProfilePage() {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 text-center">
+        <div className="bg-gray-50/50 border border-gray-300 rounded-lg p-4 text-center">
           <div className="text-2xl font-bold">{user.stats.containers}</div>
-          <div className="text-sm text-gray-400">Containers</div>
+          <div className="text-sm text-gray-600">Containers</div>
         </div>
-        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 text-center">
+        <div className="bg-gray-50/50 border border-gray-300 rounded-lg p-4 text-center">
           <div className="text-2xl font-bold">{user.stats.namespaces}</div>
-          <div className="text-sm text-gray-400">Namespaces</div>
+          <div className="text-sm text-gray-600">Namespaces</div>
         </div>
-        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 text-center">
+        <div className="bg-gray-50/50 border border-gray-300 rounded-lg p-4 text-center">
           <div className="text-2xl font-bold">{user.stats.contributions}</div>
-          <div className="text-sm text-gray-400">Contributions</div>
+          <div className="text-sm text-gray-600">Contributions</div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-700 mb-6">
+      <div className="border-b border-gray-300 mb-6">
         <div className="flex gap-6">
           {[
             { key: "overview", label: "Overview" },
@@ -97,8 +97,8 @@ export default function ProfilePage() {
               onClick={() => setActiveTab(tab.key as any)}
               className={`pb-3 px-1 text-sm border-b-2 transition ${
                 activeTab === tab.key
-                  ? "border-emerald-500 text-white"
-                  : "border-transparent text-gray-400 hover:text-white"
+                  ? "border-emerald-500 text-gray-900"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
               }`}
             >
               {tab.label}
@@ -117,28 +117,28 @@ export default function ProfilePage() {
                 <Link
                   key={id}
                   href={`/containers/0711:product:demo:${id}:v1`}
-                  className="block bg-gray-800/50 border border-gray-700 rounded-lg p-4 hover:border-emerald-500 transition"
+                  className="block bg-gray-50/50 border border-gray-300 rounded-lg p-4 hover:border-emerald-500 transition"
                 >
                   <div className="font-medium">{id}</div>
-                  <code className="text-xs text-gray-400">0711:product:demo:{id}:v1</code>
+                  <code className="text-xs text-gray-600">0711:product:demo:{id}:v1</code>
                 </Link>
               ))}
             </div>
           </div>
           <div>
             <h2 className="font-semibold mb-4">Contribution Activity</h2>
-            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+            <div className="bg-gray-50/50 border border-gray-300 rounded-lg p-4">
               <div className="grid grid-cols-7 gap-1">
                 {Array.from({ length: 35 }).map((_, i) => (
                   <div
                     key={i}
                     className={`w-3 h-3 rounded-sm ${
-                      Math.random() > 0.6 ? "bg-emerald-500" : Math.random() > 0.3 ? "bg-emerald-900" : "bg-gray-700"
+                      Math.random() > 0.6 ? "bg-emerald-500" : Math.random() > 0.3 ? "bg-emerald-100" : "bg-gray-300"
                     }`}
                   />
                 ))}
               </div>
-              <p className="text-xs text-gray-400 mt-3">47 contributions in the last month</p>
+              <p className="text-xs text-gray-600 mt-3">47 contributions in the last month</p>
             </div>
           </div>
         </div>
@@ -150,14 +150,14 @@ export default function ProfilePage() {
             <Link
               key={id}
               href={`/containers/0711:product:demo:${id}:v1`}
-              className="block bg-gray-800/50 border border-gray-700 rounded-lg p-4 hover:border-emerald-500 transition"
+              className="block bg-gray-50/50 border border-gray-300 rounded-lg p-4 hover:border-emerald-500 transition"
             >
               <div className="flex justify-between items-start">
                 <div>
                   <div className="font-medium">{id}</div>
-                  <code className="text-xs text-gray-400">0711:product:demo:{id}:v1</code>
+                  <code className="text-xs text-gray-600">0711:product:demo:{id}:v1</code>
                 </div>
-                <span className="px-2 py-1 text-xs bg-emerald-900/30 text-emerald-400 rounded">
+                <span className="px-2 py-1 text-xs bg-emerald-100 text-emerald-600 rounded">
                   {["product", "campaign", "knowledge", "memory", "project"][i % 5]}
                 </span>
               </div>
@@ -174,7 +174,7 @@ export default function ProfilePage() {
             { action: "verified", target: "docs-v2", time: "1 day ago" },
             { action: "created", target: "knowledge-base", time: "2 days ago" },
           ].map((activity, i) => (
-            <div key={i} className="flex items-center gap-4 py-3 border-b border-gray-800">
+            <div key={i} className="flex items-center gap-4 py-3 border-b border-gray-200">
               <span className="text-xl">
                 {activity.action === "created" && "📦"}
                 {activity.action === "updated" && "✏️"}
@@ -182,11 +182,11 @@ export default function ProfilePage() {
               </span>
               <div className="flex-1">
                 <span className="capitalize">{activity.action}</span>
-                <Link href="#" className="text-emerald-400 hover:underline ml-2">
+                <Link href="#" className="text-emerald-600 hover:underline ml-2">
                   {activity.target}
                 </Link>
               </div>
-              <span className="text-sm text-gray-500">{activity.time}</span>
+              <span className="text-sm text-gray-600">{activity.time}</span>
             </div>
           ))}
         </div>

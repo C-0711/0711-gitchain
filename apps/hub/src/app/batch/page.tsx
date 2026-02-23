@@ -55,7 +55,7 @@ export default function BatchPage() {
     <div className="max-w-4xl mx-auto px-6 py-8">
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-2">Batch Import</h1>
-        <p className="text-gray-400">
+        <p className="text-gray-600">
           Import multiple containers at once from JSON
         </p>
       </div>
@@ -65,14 +65,14 @@ export default function BatchPage() {
         {["upload", "preview", "importing", "done"].map((s, i) => (
           <div key={s} className="flex items-center">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-              step === s ? "bg-emerald-500 text-white" :
-              ["preview", "importing", "done"].indexOf(step) > i ? "bg-emerald-500/20 text-emerald-400" :
-              "bg-gray-800 text-gray-500"
+              step === s ? "bg-emerald-500 text-gray-900" :
+              ["preview", "importing", "done"].indexOf(step) > i ? "bg-emerald-500/20 text-emerald-600" :
+              "bg-gray-50 text-gray-600"
             }`}>
               {["preview", "importing", "done"].indexOf(step) > i ? "✓" : i + 1}
             </div>
             {i < 3 && <div className={`w-16 h-0.5 mx-2 ${
-              ["preview", "importing", "done"].indexOf(step) > i ? "bg-emerald-500" : "bg-gray-700"
+              ["preview", "importing", "done"].indexOf(step) > i ? "bg-emerald-500" : "bg-gray-300"
             }`} />}
           </div>
         ))}
@@ -80,7 +80,7 @@ export default function BatchPage() {
 
       {step === "upload" && (
         <div className="space-y-6">
-          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
+          <div className="bg-gray-50/50 border border-gray-300 rounded-lg p-6">
             <h2 className="font-semibold mb-4">Paste JSON data</h2>
             <textarea
               value={jsonInput}
@@ -95,14 +95,14 @@ export default function BatchPage() {
   }
 ]`}
               rows={12}
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 font-mono text-sm focus:border-emerald-500 focus:outline-none"
+              className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 font-mono text-sm focus:border-emerald-500 focus:outline-none"
             />
             {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
           </div>
 
-          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
+          <div className="bg-gray-50/50 border border-gray-300 rounded-lg p-6">
             <h2 className="font-semibold mb-4">Or upload a file</h2>
-            <label className="block border-2 border-dashed border-gray-700 rounded-lg p-8 text-center cursor-pointer hover:border-gray-500 transition">
+            <label className="block border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-gray-500 transition">
               <input
                 type="file"
                 accept=".json"
@@ -117,7 +117,7 @@ export default function BatchPage() {
                 }}
               />
               <div className="text-4xl mb-2">📄</div>
-              <div className="text-gray-400">Drop a JSON file here or click to browse</div>
+              <div className="text-gray-600">Drop a JSON file here or click to browse</div>
             </label>
           </div>
 
@@ -131,7 +131,7 @@ export default function BatchPage() {
             </button>
             <Link
               href="/containers"
-              className="px-6 py-3 border border-gray-700 hover:border-gray-500 rounded-lg transition text-center"
+              className="px-6 py-3 border border-gray-300 hover:border-gray-500 rounded-lg transition text-center"
             >
               Cancel
             </Link>
@@ -141,23 +141,23 @@ export default function BatchPage() {
 
       {step === "preview" && (
         <div className="space-y-6">
-          <div className="bg-gray-800/50 border border-gray-700 rounded-lg overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-700 flex justify-between items-center">
+          <div className="bg-gray-50/50 border border-gray-300 rounded-lg overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-300 flex justify-between items-center">
               <span className="font-medium">{preview.length} containers to import</span>
-              <button onClick={() => setStep("upload")} className="text-sm text-gray-400 hover:text-white">
+              <button onClick={() => setStep("upload")} className="text-sm text-gray-600 hover:text-gray-900">
                 Edit
               </button>
             </div>
             <div className="max-h-96 overflow-auto">
               {preview.map((item, i) => (
-                <div key={i} className="px-4 py-3 border-b border-gray-700 last:border-0 flex justify-between items-center">
+                <div key={i} className="px-4 py-3 border-b border-gray-300 last:border-0 flex justify-between items-center">
                   <div>
                     <div className="font-medium">{item.name || item.identifier || `Item ${i + 1}`}</div>
-                    <code className="text-xs text-gray-400">
+                    <code className="text-xs text-gray-600">
                       0711:{item.type || "product"}:{item.namespace || "demo"}:{item.identifier || `item-${i}`}:v1
                     </code>
                   </div>
-                  <span className="px-2 py-1 text-xs bg-gray-700 rounded">{item.type || "product"}</span>
+                  <span className="px-2 py-1 text-xs bg-gray-200 rounded">{item.type || "product"}</span>
                 </div>
               ))}
             </div>
@@ -172,7 +172,7 @@ export default function BatchPage() {
             </button>
             <button
               onClick={() => setStep("upload")}
-              className="px-6 py-3 border border-gray-700 hover:border-gray-500 rounded-lg transition"
+              className="px-6 py-3 border border-gray-300 hover:border-gray-500 rounded-lg transition"
             >
               Back
             </button>
@@ -184,7 +184,7 @@ export default function BatchPage() {
         <div className="text-center py-16">
           <div className="inline-block animate-spin text-4xl mb-4">⏳</div>
           <h2 className="text-xl font-semibold mb-2">Importing containers...</h2>
-          <p className="text-gray-400">This may take a few moments</p>
+          <p className="text-gray-600">This may take a few moments</p>
         </div>
       )}
 
@@ -192,30 +192,30 @@ export default function BatchPage() {
         <div className="space-y-6">
           <div className={`rounded-lg p-6 ${
             result.failed === 0 
-              ? "bg-emerald-900/20 border border-emerald-700" 
+              ? "bg-emerald-50 border border-emerald-300" 
               : "bg-yellow-900/20 border border-yellow-700"
           }`}>
             <div className="flex items-center gap-3 mb-4">
               <span className="text-4xl">{result.failed === 0 ? "✅" : "⚠️"}</span>
               <div>
                 <h2 className="text-xl font-bold">Import Complete</h2>
-                <p className="text-gray-400">
+                <p className="text-gray-600">
                   {result.success} of {result.total} containers imported successfully
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-gray-800/50 border border-gray-700 rounded-lg overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-700 font-medium">
+          <div className="bg-gray-50/50 border border-gray-300 rounded-lg overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-300 font-medium">
               Results
             </div>
             <div className="max-h-64 overflow-auto">
               {result.containers.map((c, i) => (
-                <div key={i} className="px-4 py-3 border-b border-gray-700 last:border-0 flex justify-between items-center">
+                <div key={i} className="px-4 py-3 border-b border-gray-300 last:border-0 flex justify-between items-center">
                   <code className="text-sm">{c.id}</code>
                   <span className={`px-2 py-1 text-xs rounded ${
-                    c.status === "success" ? "bg-emerald-900/30 text-emerald-400" : "bg-red-900/30 text-red-400"
+                    c.status === "success" ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-400"
                   }`}>
                     {c.status}
                   </span>
@@ -238,7 +238,7 @@ export default function BatchPage() {
                 setPreview([]);
                 setResult(null);
               }}
-              className="px-6 py-3 border border-gray-700 hover:border-gray-500 rounded-lg transition"
+              className="px-6 py-3 border border-gray-300 hover:border-gray-500 rounded-lg transition"
             >
               Import More
             </button>

@@ -1,131 +1,86 @@
 "use client";
 
 import { useState } from "react";
+import AppShell, { PageHeader, Card, SectionTitle, theme as t } from "@/components/AppShell";
+
+const mono = "'SFMono-Regular','Consolas','Liberation Mono','Menlo',monospace";
 
 export default function InjectPage() {
-  const [ids, setIds] = useState("0711:product:acme:widget-001:v1");
-  const [format, setFormat] = useState<"markdown" | "json" | "yaml">("markdown");
-  const [verify, setVerify] = useState(true);
-  const [result, setResult] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const [containerId, setContainerId] = useState("");
+  const [format, setFormat] = useState("openai");
+  const [result, setResult] = useState<string | null>(null);
 
   const handleInject = async () => {
-    setLoading(true);
+    if (!containerId) return;
+    setResult("// Loading...");
     try {
-      const containerIds = ids.split("\n").map(s => s.trim()).filter(Boolean);
-      const response = await fetch("/api/inject", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ containers: containerIds, verify, format }),
-      });
-      const data = await response.json();
-      setResult(data);
-    } catch (err: any) {
-      setResult({ error: err.message });
+      const res = await fetch(`/api/inject?container=${encodeURIComponent(containerId)}&format=${format}`);
+      const data = await res.json();
+      setResult(JSON.stringify(data, null, 2));
+    } catch (e) {
+      setResult(`// Error: ${e}`);
     }
-    setLoading(false);
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8">
-      <h1 className="text-2xl font-bold mb-2">Inject Context</h1>
-      <p className="text-gray-400 mb-8">
-        Test the inject() API — get verified context for AI agents
-      </p>
+    <AppShell>
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }}>
+        <PageHeader title="Inject Context" description="Inject verified container data into your AI workflows" />
 
-      <div className="grid md:grid-cols-2 gap-8">
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">
-              Container IDs (one per line)
-            </label>
-            <textarea
-              value={ids}
-              onChange={(e) => setIds(e.target.value)}
-              rows={6}
-              className="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 font-mono text-sm"
-              placeholder="0711:product:acme:widget-001:v1"
-            />
-          </div>
+        <Card>
+          <SectionTitle>Container ID</SectionTitle>
+          <input
+            type="text"
+            placeholder="e.g., bosch:product:BCS-VT-36:v2"
+            value={containerId}
+            onChange={(e) => setContainerId(e.target.value)}
+            style={{
+              width: "100%", padding: "10px 14px", fontSize: 14, fontFamily: mono,
+              border: `1px solid ${t.border}`, borderRadius: 6, marginBottom: 20,
+              backgroundColor: "#f6f8fa",
+            }}
+          />
 
-          <div className="flex gap-6">
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Format</label>
-              <select
-                value={format}
-                onChange={(e) => setFormat(e.target.value as any)}
-                className="bg-gray-800 border border-gray-700 rounded px-4 py-2"
-              >
-                <option value="markdown">Markdown</option>
-                <option value="json">JSON</option>
-                <option value="yaml">YAML</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Verify</label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={verify}
-                  onChange={(e) => setVerify(e.target.checked)}
-                  className="rounded"
-                />
-                <span>Blockchain verification</span>
-              </label>
-            </div>
+          <SectionTitle>Output Format</SectionTitle>
+          <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+            {["openai", "anthropic", "markdown", "json"].map(f => (
+              <button
+                key={f}
+                onClick={() => setFormat(f)}
+                style={{
+                  padding: "8px 16px", fontSize: 14, borderRadius: 6, cursor: "pointer",
+                  backgroundColor: format === f ? "#0969da" : "#fff",
+                  color: format === f ? "#fff" : t.fg,
+                  border: `1px solid ${format === f ? "#0969da" : t.border}`,
+                  fontWeight: format === f ? 600 : 400,
+                }}
+              >{f}</button>
+            ))}
           </div>
 
           <button
             onClick={handleInject}
-            disabled={loading || !ids.trim()}
-            className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg font-semibold"
+            disabled={!containerId}
+            style={{
+              padding: "10px 20px", fontSize: 14, fontWeight: 600,
+              backgroundColor: containerId ? "#238636" : "#8b949e",
+              color: "#fff", border: "none", borderRadius: 6, cursor: containerId ? "pointer" : "not-allowed",
+            }}
           >
-            {loading ? "Injecting..." : "Inject Context"}
+            Inject Context
           </button>
-        </div>
+        </Card>
 
-        <div>
-          <div className="flex justify-between items-center mb-2">
-            <label className="text-sm text-gray-400">Result</label>
-            {result && !result.error && (
-              <div className="flex gap-4 text-sm">
-                <span className={result.verified ? "text-emerald-400" : "text-yellow-400"}>
-                  {result.verified ? "✓ Verified" : "⚠ Unverified"}
-                </span>
-                <span className="text-gray-500">
-                  ~{result.tokenCount || 0} tokens
-                </span>
-              </div>
-            )}
-          </div>
-          <pre className="bg-gray-900 border border-gray-700 rounded p-4 h-96 overflow-auto text-sm">
-            {result ? (
-              result.error ? (
-                <span className="text-red-400">{result.error}</span>
-              ) : (
-                result.formatted || JSON.stringify(result, null, 2)
-              )
-            ) : (
-              <span className="text-gray-500">Click Inject to see results...</span>
-            )}
-          </pre>
-        </div>
+        {result && (
+          <Card>
+            <SectionTitle>Result</SectionTitle>
+            <pre style={{
+              backgroundColor: "#0d1117", color: "#e6edf3", padding: 20, borderRadius: 6,
+              overflow: "auto", maxHeight: 400, fontSize: 13, fontFamily: mono, lineHeight: 1.6,
+            }}>{result}</pre>
+          </Card>
+        )}
       </div>
-
-      <div className="mt-8 p-4 bg-gray-800/50 rounded-lg">
-        <h3 className="font-semibold mb-2">Code Example</h3>
-        <pre className="text-sm text-gray-400">
-{`import { inject } from "@0711/inject";
-
-const context = await inject({
-  containers: ${JSON.stringify(ids.split("\n").filter(Boolean), null, 2)},
-  verify: ${verify},
-  format: "${format}",
-});
-
-console.log(context.formatted);`}
-        </pre>
-      </div>
-    </div>
+    </AppShell>
   );
 }

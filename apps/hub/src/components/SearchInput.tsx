@@ -33,15 +33,15 @@ export default function SearchInput() {
         onFocus={() => setFocused(true)}
         onBlur={() => setTimeout(() => setFocused(false), 200)}
         placeholder="Search containers... (Cmd+K)"
-        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+        className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:border-emerald-500 focus:outline-none"
       />
 
       {focused && query.length >= 2 && (
-        <div className="absolute top-full mt-2 w-full bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
+        <div className="absolute top-full mt-2 w-full bg-gray-50 border border-gray-300 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
           {loading ? (
-            <div className="p-4 text-gray-400 text-sm">Searching...</div>
+            <div className="p-4 text-gray-600 text-sm">Searching...</div>
           ) : results.length === 0 ? (
-            <div className="p-4 text-gray-400 text-sm">No results found</div>
+            <div className="p-4 text-gray-600 text-sm">No results found</div>
           ) : (
             results.slice(0, 8).map((container) => (
               <button
@@ -50,10 +50,10 @@ export default function SearchInput() {
                   router.push("/containers/" + encodeURIComponent(container.id));
                   setQuery("");
                 }}
-                className="w-full text-left px-4 py-3 hover:bg-gray-700 border-b border-gray-700 last:border-0"
+                className="w-full text-left px-4 py-3 hover:bg-gray-100 border-b border-gray-300 last:border-0"
               >
                 <div className="font-medium">{container.meta.name}</div>
-                <code className="text-xs text-gray-500">{container.id}</code>
+                <code className="text-xs text-gray-600">{container.id}</code>
               </button>
             ))
           )}

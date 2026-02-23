@@ -4,11 +4,11 @@ export default function PythonSDKPage() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-12">
       <div className="mb-8">
-        <Link href="/docs" className="text-emerald-400 hover:underline text-sm">
+        <Link href="/docs" className="text-emerald-600 hover:underline text-sm">
           ← Back to Docs
         </Link>
         <h1 className="text-3xl font-bold mt-4 mb-4">Python SDK</h1>
-        <p className="text-gray-400">
+        <p className="text-gray-600">
           Official Python SDK for GitChain.
         </p>
       </div>
@@ -16,8 +16,8 @@ export default function PythonSDKPage() {
       <div className="space-y-8">
         <section>
           <h2 className="text-xl font-semibold mb-4">Installation</h2>
-          <div className="bg-gray-900 rounded-lg p-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`pip install gitchain
+          <div className="bg-white rounded-lg p-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`pip install gitchain
 # or
 poetry add gitchain`}</code></pre>
           </div>
@@ -25,8 +25,8 @@ poetry add gitchain`}</code></pre>
 
         <section>
           <h2 className="text-xl font-semibold mb-4">Quick Start</h2>
-          <div className="bg-gray-900 rounded-lg p-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`from gitchain import GitChain
+          <div className="bg-white rounded-lg p-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`from gitchain import GitChain
 
 # Initialize client
 client = GitChain("gc_live_your_api_key")
@@ -46,9 +46,9 @@ print(context.formatted)`}</code></pre>
           <h2 className="text-xl font-semibold mb-4">API Reference</h2>
           
           <h3 className="font-semibold mt-6 mb-2">client.inject()</h3>
-          <p className="text-gray-400 mb-4">Inject verified context from containers.</p>
-          <div className="bg-gray-900 rounded-lg p-4 mb-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`context = client.inject(
+          <p className="text-gray-600 mb-4">Inject verified context from containers.</p>
+          <div className="bg-white rounded-lg p-4 mb-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`context = client.inject(
     containers: list[str],          # Container IDs
     verify: bool = True,            # Verify on blockchain
     format: str = "markdown",       # markdown | json | yaml
@@ -65,8 +65,8 @@ context.citations       # List[Citation]`}</code></pre>
           </div>
 
           <h3 className="font-semibold mt-6 mb-2">client.containers.list()</h3>
-          <div className="bg-gray-900 rounded-lg p-4 mb-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`result = client.containers.list(
+          <div className="bg-white rounded-lg p-4 mb-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`result = client.containers.list(
     type: str = None,
     namespace: str = None,
     limit: int = 20,
@@ -78,8 +78,8 @@ for container in result.containers:
           </div>
 
           <h3 className="font-semibold mt-6 mb-2">client.containers.get()</h3>
-          <div className="bg-gray-900 rounded-lg p-4 mb-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`container = client.containers.get(
+          <div className="bg-white rounded-lg p-4 mb-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`container = client.containers.get(
     "0711:product:acme:widget-001:v1"
 )
 
@@ -88,8 +88,8 @@ print(container.meta)`}</code></pre>
           </div>
 
           <h3 className="font-semibold mt-6 mb-2">client.containers.create()</h3>
-          <div className="bg-gray-900 rounded-lg p-4 mb-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`container = client.containers.create(
+          <div className="bg-white rounded-lg p-4 mb-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`container = client.containers.create(
     type="product",
     namespace="acme",
     identifier="widget-002",
@@ -101,8 +101,8 @@ print(container.id)  # 0711:product:acme:widget-002:v1`}</code></pre>
           </div>
 
           <h3 className="font-semibold mt-6 mb-2">client.verify()</h3>
-          <div className="bg-gray-900 rounded-lg p-4 mb-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`verification = client.verify(
+          <div className="bg-white rounded-lg p-4 mb-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`verification = client.verify(
     "0711:product:acme:widget-001:v1"
 )
 
@@ -114,8 +114,8 @@ print(verification.chain.block_number) # 18234567`}</code></pre>
 
         <section>
           <h2 className="text-xl font-semibold mb-4">Usage with LLMs</h2>
-          <div className="bg-gray-900 rounded-lg p-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`from gitchain import GitChain
+          <div className="bg-white rounded-lg p-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`from gitchain import GitChain
 from openai import OpenAI
 
 gitchain = GitChain("gc_live_...")
@@ -143,8 +143,8 @@ response = openai.chat.completions.create(
 
         <section>
           <h2 className="text-xl font-semibold mb-4">Async Support</h2>
-          <div className="bg-gray-900 rounded-lg p-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`from gitchain import AsyncGitChain
+          <div className="bg-white rounded-lg p-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`from gitchain import AsyncGitChain
 import asyncio
 
 async def main():
@@ -162,8 +162,8 @@ asyncio.run(main())`}</code></pre>
 
         <section>
           <h2 className="text-xl font-semibold mb-4">Error Handling</h2>
-          <div className="bg-gray-900 rounded-lg p-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`from gitchain import GitChain, GitChainError
+          <div className="bg-white rounded-lg p-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`from gitchain import GitChain, GitChainError
 
 try:
     context = client.inject(containers=[...])
@@ -173,11 +173,11 @@ except GitChainError as e:
           </div>
         </section>
 
-        <div className="mt-8 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
+        <div className="mt-8 p-4 bg-blue-100/20 border border-blue-700 rounded-lg">
           <h3 className="font-semibold mb-2">📦 Package Info</h3>
-          <p className="text-sm text-gray-400">
-            <strong>PyPI:</strong> <code className="text-emerald-400">gitchain</code><br/>
-            <strong>GitHub:</strong> <a href="https://github.com/C-0711/0711-gitchain" className="text-emerald-400 hover:underline">C-0711/0711-gitchain</a>
+          <p className="text-sm text-gray-600">
+            <strong>PyPI:</strong> <code className="text-emerald-600">gitchain</code><br/>
+            <strong>GitHub:</strong> <a href="https://github.com/C-0711/0711-gitchain" className="text-emerald-600 hover:underline">C-0711/0711-gitchain</a>
           </p>
         </div>
       </div>

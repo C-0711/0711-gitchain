@@ -102,18 +102,18 @@ export default function ComparePage({ params }: { params: { id: string } }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
-        <div className="animate-pulse text-gray-400">Loading...</div>
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="animate-pulse text-gray-600">Loading...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-400 mb-4">{error}</p>
-          <Link href={`/containers/${encodeURIComponent(containerId)}`} className="text-emerald-400 hover:underline">
+          <Link href={`/containers/${encodeURIComponent(containerId)}`} className="text-emerald-600 hover:underline">
             Back to container
           </Link>
         </div>
@@ -122,16 +122,16 @@ export default function ComparePage({ params }: { params: { id: string } }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-[#c9d1d9]">
+    <div className="min-h-screen bg-gray-100 text-[#c9d1d9]">
       {/* Header */}
       <div className="border-b border-[#21262d]">
         <div className="max-w-[1280px] mx-auto px-6 py-4">
           <div className="flex items-center gap-2 text-sm text-[#8b949e] mb-4">
-            <Link href={`/containers/${encodeURIComponent(containerId)}`} className="hover:text-white">
+            <Link href={`/containers/${encodeURIComponent(containerId)}`} className="hover:text-gray-900">
               {containerId}
             </Link>
             <span>/</span>
-            <span className="text-white">Compare</span>
+            <span className="text-gray-900">Compare</span>
           </div>
 
           <h1 className="text-xl font-semibold mb-4">Compare Layers</h1>
@@ -175,7 +175,7 @@ export default function ComparePage({ params }: { params: { id: string } }) {
             {fromLayer && toLayer && fromLayer !== toLayer && (
               <button
                 onClick={() => { const tmp = fromLayer; setFromLayer(toLayer); setToLayer(tmp); }}
-                className="p-2 text-[#8b949e] hover:text-white hover:bg-[#21262d] rounded-md transition"
+                className="p-2 text-[#8b949e] hover:text-gray-900 hover:bg-[#21262d] rounded-md transition"
                 title="Swap"
               >
                 ⇄
@@ -189,7 +189,7 @@ export default function ComparePage({ params }: { params: { id: string } }) {
       <div className="max-w-[1280px] mx-auto px-6 py-6">
         {diffLoading ? (
           <div className="text-center py-12">
-            <div className="animate-pulse text-gray-400">Calculating diff...</div>
+            <div className="animate-pulse text-gray-600">Calculating diff...</div>
           </div>
         ) : !diffData ? (
           <div className="text-center py-12 border border-[#30363d] rounded-lg">
@@ -199,7 +199,7 @@ export default function ComparePage({ params }: { params: { id: string } }) {
         ) : (
           <>
             {/* Stats bar */}
-            <div className="flex items-center gap-6 mb-6 p-4 bg-[#161b22] border border-[#30363d] rounded-lg">
+            <div className="flex items-center gap-6 mb-6 p-4 bg-gray-100 border border-[#30363d] rounded-lg">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-green-500"></span>
                 <span className="text-green-400 font-medium">+{diffData.stats.additions}</span>
@@ -232,7 +232,7 @@ export default function ComparePage({ params }: { params: { id: string } }) {
                       <div className="flex items-center gap-3">
                         <code className="text-green-400 text-sm">+ {item.name || item.field}</code>
                         <span className="text-[#484f58]">=</span>
-                        <code className="text-white text-sm">{JSON.stringify(item.value)}</code>
+                        <code className="text-gray-900 text-sm">{JSON.stringify(item.value)}</code>
                         {item.unit && <span className="text-[#8b949e] text-xs">{item.unit}</span>}
                       </div>
                     </div>
@@ -249,7 +249,7 @@ export default function ComparePage({ params }: { params: { id: string } }) {
                 </h3>
                 <div className="border border-red-900/50 rounded-lg overflow-hidden">
                   {diffData.diff.deletions.map((item, i) => (
-                    <div key={i} className="px-4 py-2 border-b border-red-900/30 last:border-0 bg-red-900/10">
+                    <div key={i} className="px-4 py-2 border-b border-red-900/30 last:border-0 bg-red-100/10">
                       <div className="flex items-center gap-3">
                         <code className="text-red-400 text-sm">- {item.name || item.field}</code>
                         <span className="text-[#484f58]">=</span>
@@ -273,7 +273,7 @@ export default function ComparePage({ params }: { params: { id: string } }) {
                     <div key={i} className="px-4 py-3 border-b border-yellow-900/30 last:border-0 bg-yellow-900/10">
                       <div className="font-medium text-sm mb-2">{item.name || item.field}</div>
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-red-900/20 rounded px-3 py-2">
+                        <div className="bg-red-100/20 rounded px-3 py-2">
                           <div className="text-xs text-red-400 mb-1">Before</div>
                           <code className="text-sm text-red-300">{JSON.stringify(item.from?.value)}</code>
                           {item.from?.unit && <span className="text-xs text-[#8b949e] ml-1">{item.from.unit}</span>}
@@ -304,7 +304,7 @@ export default function ComparePage({ params }: { params: { id: string } }) {
         <div className="mt-6">
           <Link
             href={`/containers/${encodeURIComponent(containerId)}`}
-            className="text-sm text-[#8b949e] hover:text-white transition flex items-center gap-1"
+            className="text-sm text-[#8b949e] hover:text-gray-900 transition flex items-center gap-1"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

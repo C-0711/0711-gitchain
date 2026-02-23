@@ -75,11 +75,11 @@ export default function HistoryPage({ params }: { params: { id: string } }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0d1117]">
+      <div className="min-h-screen bg-gray-100">
         <div className="max-w-[1280px] mx-auto px-6 py-8">
           <div className="animate-pulse space-y-4">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-24 bg-gray-800 rounded"></div>
+              <div key={i} className="h-24 bg-gray-50 rounded"></div>
             ))}
           </div>
         </div>
@@ -89,10 +89,10 @@ export default function HistoryPage({ params }: { params: { id: string } }) {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-400 mb-4">{error}</p>
-          <Link href={`/containers/${encodeURIComponent(containerId)}`} className="text-emerald-400 hover:underline">
+          <Link href={`/containers/${encodeURIComponent(containerId)}`} className="text-emerald-600 hover:underline">
             Back to container
           </Link>
         </div>
@@ -101,16 +101,16 @@ export default function HistoryPage({ params }: { params: { id: string } }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-[#c9d1d9]">
+    <div className="min-h-screen bg-gray-100 text-[#c9d1d9]">
       {/* Header */}
       <div className="border-b border-[#21262d]">
         <div className="max-w-[1280px] mx-auto px-6 py-4">
           <div className="flex items-center gap-2 text-sm text-[#8b949e]">
-            <Link href={`/containers/${encodeURIComponent(containerId)}`} className="hover:text-white">
+            <Link href={`/containers/${encodeURIComponent(containerId)}`} className="hover:text-gray-900">
               {containerId}
             </Link>
             <span>/</span>
-            <span className="text-white">History</span>
+            <span className="text-gray-900">History</span>
           </div>
         </div>
       </div>
@@ -141,7 +141,7 @@ export default function HistoryPage({ params }: { params: { id: string } }) {
         ) : (
           <div className="border border-[#30363d] rounded-lg divide-y divide-[#21262d]">
             {commits.map((commit, idx) => (
-              <div key={commit.id} className="px-4 py-4 hover:bg-[#161b22] transition">
+              <div key={commit.id} className="px-4 py-4 hover:bg-gray-100 transition">
                 <div className="flex items-start gap-4">
                   {/* Timeline dot */}
                   <div className="flex flex-col items-center">
@@ -159,7 +159,7 @@ export default function HistoryPage({ params }: { params: { id: string } }) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="font-medium text-white">{commit.message}</p>
+                        <p className="font-medium text-gray-900">{commit.message}</p>
                         <div className="flex items-center gap-3 mt-1 text-sm text-[#8b949e]">
                           <div className="flex items-center gap-1">
                             <div className="w-4 h-4 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-full flex items-center justify-center text-[8px] font-bold">
@@ -179,7 +179,7 @@ export default function HistoryPage({ params }: { params: { id: string } }) {
                             href={`https://basescan.org/tx/${commit.txHash}`}
                             target="_blank"
                             rel="noopener"
-                            className="flex items-center gap-1 px-2 py-1 bg-emerald-900/30 text-emerald-400 border border-emerald-800 rounded text-xs hover:bg-emerald-900/50 transition"
+                            className="flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-600 border border-emerald-300 rounded text-xs hover:bg-emerald-200 transition"
                           >
                             <span>⛓️</span>
                             <span>Block #{commit.blockNumber}</span>
@@ -229,7 +229,7 @@ export default function HistoryPage({ params }: { params: { id: string } }) {
         <div className="mt-6">
           <Link
             href={`/containers/${encodeURIComponent(containerId)}`}
-            className="text-sm text-[#8b949e] hover:text-white transition flex items-center gap-1"
+            className="text-sm text-[#8b949e] hover:text-gray-900 transition flex items-center gap-1"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

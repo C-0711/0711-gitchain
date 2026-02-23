@@ -2,153 +2,215 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import AppShell, { PageHeader, Card, SectionTitle, theme as t } from "@/components/AppShell";
+
+const mono = "'SFMono-Regular','Consolas','Liberation Mono','Menlo',monospace";
+
+const containerTypes = [
+  { value: "product", label: "Product", desc: "Physical or digital products with specifications" },
+  { value: "campaign", label: "Campaign", desc: "Marketing campaigns and advertising materials" },
+  { value: "project", label: "Project", desc: "Project documentation and artifacts" },
+  { value: "knowledge", label: "Knowledge", desc: "Knowledge bases and documentation" },
+  { value: "memory", label: "Memory", desc: "Personal or organizational memories" },
+];
 
 export default function NewContainerPage() {
   const router = useRouter();
+  const [namespace, setNamespace] = useState("");
+  const [type, setType] = useState("product");
+  const [identifier, setIdentifier] = useState("");
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    type: "product",
-    namespace: "",
-    identifier: "",
-    name: "",
-    description: "",
-    data: "{\n  \n}",
-  });
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     setLoading(true);
 
     try {
-      const response = await fetch("/api/containers", {
+      const res = await fetch("/api/containers", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: form.type,
-          namespace: form.namespace,
-          identifier: form.identifier,
-          data: JSON.parse(form.data),
-          meta: {
-            name: form.name,
-            description: form.description,
-          },
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ namespace, type, identifier, name, description }),
       });
 
-      if (!response.ok) throw new Error("Failed to create container");
-      const result = await response.json();
-      router.push("/containers/" + encodeURIComponent(result.id));
-    } catch (err: any) {
-      alert(err.message);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to create container");
+        return;
+      }
+
+      router.push(`/containers/${data.id}`);
+    } catch (err) {
+      setError("Network error. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  const fullId = namespace && identifier ? `${namespace}:${type}:${identifier}` : "";
+
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
-      <h1 className="text-2xl font-bold mb-8">Create Container</h1>
+    <AppShell>
+      <div style={{ maxWidth: 700, margin: "0 auto", padding: "32px 24px" }}>
+        <PageHeader title="New Container" description="Create a versioned knowledge container" />
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid md:grid-cols-3 gap-6">
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">Type</label>
-            <select
-              value={form.type}
-              onChange={(e) => setForm({ ...form, type: e.target.value })}
-              className="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3"
-            >
-              <option value="product">Product</option>
-              <option value="campaign">Campaign</option>
-              <option value="project">Project</option>
-              <option value="memory">Memory</option>
-              <option value="knowledge">Knowledge</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">Namespace</label>
-            <input
-              type="text"
-              value={form.namespace}
-              onChange={(e) => setForm({ ...form, namespace: e.target.value })}
-              placeholder="e.g., acme"
-              className="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">Identifier</label>
-            <input
-              type="text"
-              value={form.identifier}
-              onChange={(e) => setForm({ ...form, identifier: e.target.value })}
-              placeholder="e.g., widget-001"
-              className="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3"
-              required
-            />
-          </div>
-        </div>
+        <form onSubmit={handleSubmit}>
+          {error && (
+            <div style={{
+              padding: "12px 16px", marginBottom: 24,
+              backgroundColor: "#ffebe9", border: "1px solid #cf222e",
+              borderRadius: 6, color: "#cf222e", fontSize: 14,
+            }}>{error}</div>
+          )}
 
-        <div>
-          <label className="block text-sm text-gray-400 mb-2">Name</label>
-          <input
-            type="text"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Display name for this container"
-            className="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3"
-            required
-          />
-        </div>
+          <Card>
+            <SectionTitle>Container Details</SectionTitle>
 
-        <div>
-          <label className="block text-sm text-gray-400 mb-2">Description (optional)</label>
-          <input
-            type="text"
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            placeholder="Brief description"
-            className="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3"
-          />
-        </div>
+            <div style={{ display: "grid", gap: 20 }}>
+              {/* Namespace */}
+              <div>
+                <label style={{ display: "block", fontSize: 14, fontWeight: 500, color: t.fg, marginBottom: 6 }}>
+                  Namespace <span style={{ color: "#cf222e" }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={namespace}
+                  onChange={(e) => setNamespace(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                  placeholder="e.g., bosch, acme"
+                  required
+                  style={{
+                    width: "100%", padding: "10px 12px", fontSize: 14, fontFamily: mono,
+                    border: `1px solid ${t.border}`, borderRadius: 6, backgroundColor: "#f6f8fa",
+                  }}
+                />
+                <p style={{ fontSize: 12, color: t.fgMuted, marginTop: 4 }}>Lowercase letters, numbers, and hyphens only</p>
+              </div>
 
-        <div>
-          <label className="block text-sm text-gray-400 mb-2">Data (JSON)</label>
-          <textarea
-            value={form.data}
-            onChange={(e) => setForm({ ...form, data: e.target.value })}
-            rows={12}
-            className="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 font-mono text-sm"
-            required
-          />
-        </div>
+              {/* Type */}
+              <div>
+                <label style={{ display: "block", fontSize: 14, fontWeight: 500, color: t.fg, marginBottom: 8 }}>
+                  Container Type <span style={{ color: "#cf222e" }}>*</span>
+                </label>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {containerTypes.map(ct => (
+                    <label
+                      key={ct.value}
+                      style={{
+                        display: "flex", alignItems: "flex-start", gap: 10, padding: 12,
+                        border: `1px solid ${type === ct.value ? "#238636" : t.border}`,
+                        borderRadius: 6, cursor: "pointer",
+                        backgroundColor: type === ct.value ? "#dafbe1" : "#fff",
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="type"
+                        value={ct.value}
+                        checked={type === ct.value}
+                        onChange={(e) => setType(e.target.value)}
+                        style={{ marginTop: 2 }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 500, fontSize: 14, color: t.fg }}>{ct.label}</div>
+                        <div style={{ fontSize: 12, color: t.fgMuted }}>{ct.desc}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
 
-        <div className="flex gap-4">
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg font-semibold"
-          >
-            {loading ? "Creating..." : "Create Container"}
-          </button>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="px-6 py-3 border border-gray-700 hover:border-gray-500 rounded-lg"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
+              {/* Identifier */}
+              <div>
+                <label style={{ display: "block", fontSize: 14, fontWeight: 500, color: t.fg, marginBottom: 6 }}>
+                  Identifier <span style={{ color: "#cf222e" }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ""))}
+                  placeholder="e.g., BCS-VT-36-4"
+                  required
+                  style={{
+                    width: "100%", padding: "10px 12px", fontSize: 14, fontFamily: mono,
+                    border: `1px solid ${t.border}`, borderRadius: 6, backgroundColor: "#f6f8fa",
+                  }}
+                />
+              </div>
 
-      <div className="mt-8 p-4 bg-gray-800/50 rounded-lg">
-        <p className="text-sm text-gray-400">
-          <strong>Preview ID:</strong>{" "}
-          <code className="text-emerald-400">
-            0711:{form.type}:{form.namespace || "namespace"}:{form.identifier || "id"}:v1
-          </code>
-        </p>
+              {/* Preview */}
+              {fullId && (
+                <div style={{ padding: 12, backgroundColor: "#f6f8fa", borderRadius: 6 }}>
+                  <div style={{ fontSize: 12, color: t.fgMuted, marginBottom: 4 }}>Container ID</div>
+                  <code style={{ fontFamily: mono, fontSize: 14, color: t.fg }}>{fullId}</code>
+                </div>
+              )}
+
+              {/* Name */}
+              <div>
+                <label style={{ display: "block", fontSize: 14, fontWeight: 500, color: t.fg, marginBottom: 6 }}>Display Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g., Compress 3000 AWS Heat Pump"
+                  style={{
+                    width: "100%", padding: "10px 12px", fontSize: 14,
+                    border: `1px solid ${t.border}`, borderRadius: 6, backgroundColor: "#f6f8fa",
+                  }}
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label style={{ display: "block", fontSize: 14, fontWeight: 500, color: t.fg, marginBottom: 6 }}>Description</label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
+                  placeholder="Optional description of this container"
+                  style={{
+                    width: "100%", padding: "10px 12px", fontSize: 14,
+                    border: `1px solid ${t.border}`, borderRadius: 6, backgroundColor: "#f6f8fa", resize: "vertical",
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginTop: 24, display: "flex", gap: 12 }}>
+              <button
+                type="submit"
+                disabled={loading || !namespace || !identifier}
+                style={{
+                  padding: "10px 20px", fontSize: 14, fontWeight: 600,
+                  backgroundColor: !loading && namespace && identifier ? "#238636" : "#8b949e",
+                  color: "#fff", border: "none", borderRadius: 6,
+                  cursor: !loading && namespace && identifier ? "pointer" : "not-allowed",
+                }}
+              >
+                {loading ? "Creating..." : "Create container"}
+              </button>
+              <button
+                type="button"
+                onClick={() => router.back()}
+                style={{
+                  padding: "10px 20px", fontSize: 14, fontWeight: 500,
+                  backgroundColor: "#fff", color: t.fg, border: `1px solid ${t.border}`,
+                  borderRadius: 6, cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </Card>
+        </form>
       </div>
-    </div>
+    </AppShell>
   );
 }

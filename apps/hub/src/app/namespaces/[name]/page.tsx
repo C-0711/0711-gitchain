@@ -39,8 +39,8 @@ interface NamespaceData {
 }
 
 const typeConfig: Record<string, { icon: string; bg: string; text: string }> = {
-  product:   { icon: '📦', bg: 'bg-emerald-900/30', text: 'text-emerald-400' },
-  campaign:  { icon: '📢', bg: 'bg-blue-900/30',    text: 'text-blue-400' },
+  product:   { icon: '📦', bg: 'bg-emerald-100', text: 'text-emerald-600' },
+  campaign:  { icon: '📢', bg: 'bg-blue-100',    text: 'text-blue-400' },
   project:   { icon: '📋', bg: 'bg-purple-900/30',  text: 'text-purple-400' },
   memory:    { icon: '🧠', bg: 'bg-orange-900/30',  text: 'text-orange-400' },
   knowledge: { icon: '📚', bg: 'bg-yellow-900/30',  text: 'text-yellow-400' },
@@ -84,13 +84,13 @@ export default function NamespacePage({ params }: { params: { name: string } }) 
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0d1117]">
+      <div className="min-h-screen bg-gray-100">
         <div className="max-w-[1280px] mx-auto px-6 py-8">
           <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-gray-800 rounded w-1/4"></div>
-            <div className="h-4 bg-gray-800 rounded w-1/2"></div>
+            <div className="h-8 bg-gray-50 rounded w-1/4"></div>
+            <div className="h-4 bg-gray-50 rounded w-1/2"></div>
             <div className="grid grid-cols-4 gap-4">
-              {[1,2,3,4].map(i => <div key={i} className="h-20 bg-gray-800 rounded"></div>)}
+              {[1,2,3,4].map(i => <div key={i} className="h-20 bg-gray-50 rounded"></div>)}
             </div>
           </div>
         </div>
@@ -100,11 +100,11 @@ export default function NamespacePage({ params }: { params: { name: string } }) 
 
   if (error || !namespace) {
     return (
-      <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="text-6xl mb-4">📁</div>
           <h2 className="text-2xl font-bold mb-2">Namespace not found</h2>
-          <p className="text-gray-400 mb-6">{error || 'The namespace you requested could not be found.'}</p>
+          <p className="text-gray-600 mb-6">{error || 'The namespace you requested could not be found.'}</p>
           <Link href="/namespaces" className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg transition">
             Browse Namespaces
           </Link>
@@ -114,7 +114,7 @@ export default function NamespacePage({ params }: { params: { name: string } }) 
   }
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-[#c9d1d9]">
+    <div className="min-h-screen bg-gray-100 text-[#c9d1d9]">
       {/* Header */}
       <div className="border-b border-[#21262d]">
         <div className="max-w-[1280px] mx-auto px-6 py-8">
@@ -125,7 +125,7 @@ export default function NamespacePage({ params }: { params: { name: string } }) 
                   {namespace.displayName.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-white">{namespace.displayName}</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">{namespace.displayName}</h1>
                   <p className="text-[#8b949e]">@{namespace.name}</p>
                 </div>
               </div>
@@ -135,20 +135,20 @@ export default function NamespacePage({ params }: { params: { name: string } }) 
               <div className="flex items-center gap-6 mt-4 text-sm text-[#8b949e]">
                 <span className="flex items-center gap-1">
                   <span>📦</span>
-                  <strong className="text-white">{namespace.stats.containerCount}</strong> containers
+                  <strong className="text-gray-900">{namespace.stats.containerCount}</strong> containers
                 </span>
                 <span className="flex items-center gap-1">
                   <span>⚛️</span>
-                  <strong className="text-white">{namespace.stats.totalAtoms.toLocaleString()}</strong> atoms
+                  <strong className="text-gray-900">{namespace.stats.totalAtoms.toLocaleString()}</strong> atoms
                 </span>
                 <span className="flex items-center gap-1">
                   <span>⛓️</span>
-                  <strong className="text-white">{namespace.stats.verifiedCount}</strong> verified
+                  <strong className="text-gray-900">{namespace.stats.verifiedCount}</strong> verified
                 </span>
                 {namespace.stats.memberCount > 0 && (
                   <span className="flex items-center gap-1">
                     <span>👥</span>
-                    <strong className="text-white">{namespace.stats.memberCount}</strong> members
+                    <strong className="text-gray-900">{namespace.stats.memberCount}</strong> members
                   </span>
                 )}
               </div>
@@ -196,7 +196,7 @@ export default function NamespacePage({ params }: { params: { name: string } }) 
                 <p className="text-[#8b949e] mb-4">No containers yet</p>
                 <Link
                   href={`/containers/new?namespace=${namespace.name}`}
-                  className="text-emerald-400 hover:underline"
+                  className="text-emerald-600 hover:underline"
                 >
                   Create the first container
                 </Link>
@@ -209,7 +209,7 @@ export default function NamespacePage({ params }: { params: { name: string } }) 
                     <Link
                       key={container.id}
                       href={`/containers/${encodeURIComponent(container.id)}`}
-                      className="block px-4 py-4 hover:bg-[#161b22] transition"
+                      className="block px-4 py-4 hover:bg-gray-100 transition"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-3">
@@ -220,7 +220,7 @@ export default function NamespacePage({ params }: { params: { name: string } }) 
                                 {container.name}
                               </span>
                               {container.isVerified && (
-                                <span className="px-1.5 py-0.5 text-xs rounded bg-emerald-900/30 text-emerald-400 border border-emerald-800">
+                                <span className="px-1.5 py-0.5 text-xs rounded bg-emerald-100 text-emerald-600 border border-emerald-300">
                                   ✓ Verified
                                 </span>
                               )}
@@ -291,13 +291,13 @@ export default function NamespacePage({ params }: { params: { name: string } }) 
                 <div className="space-y-2">
                   <Link
                     href={`/containers/new?namespace=${namespace.name}`}
-                    className="flex items-center gap-2 text-sm text-[#8b949e] hover:text-white transition"
+                    className="flex items-center gap-2 text-sm text-[#8b949e] hover:text-gray-900 transition"
                   >
                     <span>➕</span> New Container
                   </Link>
                   <Link
                     href={`/inject?namespace=${namespace.name}`}
-                    className="flex items-center gap-2 text-sm text-[#8b949e] hover:text-white transition"
+                    className="flex items-center gap-2 text-sm text-[#8b949e] hover:text-gray-900 transition"
                   >
                     <span>💉</span> Inject All
                   </Link>

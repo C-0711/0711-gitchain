@@ -1,0 +1,648 @@
+{
+  "container_id": "0711:product:bosch:8738208680:v1",
+  "type": "product",
+  "namespace": "bosch",
+  "identifier": "8738208680",
+  "version": 1,
+  
+  "identity": {
+    "supplier_pid": "8738208680",
+    "manufacturer": "Bosch Thermotechnik GmbH",
+    "name": "CS7000iAW 7 IR-S",
+    "description_short": "Luftwärmepumpe CS7000iAW 7 IR-S Wärmepumpe zur Innenaufstellung",
+    "description_long": "Hersteller: Bosch Thermotechnik GmbH\nBestell-Nr.: 8738208680\nVerpackungsabmessung: 930x440x1370 mm\nGesamtgewicht inkl. Verpackung: 140 kg",
+    "brand": "Bosch",
+    "product_series": "Compress 7000i AW",
+    "model_designation": "CS7000iAW 7 IR-S",
+    "gtin": null,
+    "product_type": "Luft-Wasser (Monoblock)",
+    "installation": "Innen"
+  },
+  
+  "classification": {
+    "etim": {
+      "version": "10.0",
+      "class_code": "EC012034",
+      "class_name": "Luft/Wasser-Wärmepumpe",
+      "group_code": "EG020049"
+    },
+    "warengruppe": "EWP"
+  },
+  
+  "layers": [
+    {
+      "id": "000-manufacturer",
+      "name": "Bosch Original",
+      "type": "manufacturer",
+      "contributor_id": "bosch-thermotechnik",
+      "trust_level": "highest",
+      "source": "arge_artikelattribute",
+      "atoms": []
+    },
+    {
+      "id": "001-etim",
+      "name": "ETIM Klassifikation", 
+      "type": "classification",
+      "contributor_id": "etim-international",
+      "trust_level": "high",
+      "atoms": []
+    },
+    {
+      "id": "002-datasheet",
+      "name": "Datenblatt-Extraktion",
+      "type": "extraction",
+      "contributor_id": "0711-audit-pipeline",
+      "trust_level": "medium",
+      "atoms": []
+    }
+  ],
+  
+  "atoms": {
+    "abmessungen": {
+      "_meta": {
+        "layer": "000-manufacturer",
+        "source_table": "arge_artikelattribute"
+      },
+      "breite": {
+        "value": 440,
+        "unit": "mm",
+        "source_type": "manufacturer",
+        "trust_level": "highest",
+        "citation": {
+          "source": "arge_artikelattribute.attributwert",
+          "query": "werksartikelnummer = '8738208680' AND attributname = 'Breite'",
+          "raw_value": "440.000"
+        }
+      },
+      "tiefe": {
+        "value": 930,
+        "unit": "mm",
+        "source_type": "manufacturer",
+        "trust_level": "highest",
+        "citation": {
+          "source": "arge_artikelattribute.attributwert",
+          "query": "werksartikelnummer = '8738208680' AND attributname = 'Länge'",
+          "raw_value": "930.000"
+        }
+      },
+      "hoehe": {
+        "value": 1370,
+        "unit": "mm",
+        "source_type": "manufacturer",
+        "trust_level": "highest",
+        "citation": {
+          "source": "arge_artikelattribute.attributwert",
+          "query": "werksartikelnummer = '8738208680' AND attributname = 'Höhe'",
+          "raw_value": "1370.000"
+        }
+      },
+      "gewicht": {
+        "value": 140,
+        "unit": "kg",
+        "source_type": "manufacturer",
+        "trust_level": "highest",
+        "citation": {
+          "source": "arge_artikelattribute.attributwert",
+          "query": "werksartikelnummer = '8738208680' AND attributname = 'Gewicht'",
+          "raw_value": "140.000"
+        }
+      }
+    },
+    
+    "effizienz": {
+      "_meta": {
+        "layer": "000-manufacturer",
+        "source_table": "arge_artikelattribute"
+      },
+      "energieeffizienzklasse_raumheizung": {
+        "value": "A++",
+        "source_type": "manufacturer",
+        "trust_level": "highest",
+        "citation": {
+          "source": "arge_artikelattribute.attributwert",
+          "query": "attributname = 'jahresz. Raumheizung'"
+        }
+      },
+      "energieeffizienzklasse_raumheizung_35c": {
+        "value": "A+++",
+        "source_type": "manufacturer",
+        "trust_level": "highest",
+        "citation": {
+          "source": "arge_artikelattribute.attributwert",
+          "query": "attributname = 'jahresz. Raumheizung niedertemp. 35C'"
+        }
+      },
+      "eta_s_h_35c_durchschnitt": {
+        "ef_code": "EF010784",
+        "value": 185,
+        "unit": "%",
+        "source_type": "manufacturer",
+        "trust_level": "highest",
+        "citation": {
+          "source": "arge_artikelattribute.attributwert",
+          "query": "attributname = 'EF010784'"
+        }
+      },
+      "eta_s_h_35c_kaelter": {
+        "ef_code": "EF010785",
+        "value": 169,
+        "unit": "%",
+        "source_type": "manufacturer",
+        "trust_level": "highest"
+      },
+      "eta_s_h_35c_waermer": {
+        "ef_code": "EF010786",
+        "value": 262,
+        "unit": "%",
+        "source_type": "manufacturer",
+        "trust_level": "highest"
+      },
+      "eta_s_h_55c_durchschnitt": {
+        "ef_code": "EF010787",
+        "value": 141,
+        "unit": "%",
+        "source_type": "manufacturer",
+        "trust_level": "highest"
+      },
+      "eta_s_h_55c_kaelter": {
+        "ef_code": "EF010788",
+        "value": 128,
+        "unit": "%",
+        "source_type": "manufacturer",
+        "trust_level": "highest"
+      },
+      "eta_s_h_55c_waermer": {
+        "ef_code": "EF010789",
+        "value": 167,
+        "unit": "%",
+        "source_type": "manufacturer",
+        "trust_level": "highest"
+      }
+    },
+    
+    "leistung": {
+      "_meta": {
+        "layer": "000-manufacturer"
+      },
+      "copd_7c": {
+        "ef_code": "EF010933",
+        "value": 4.45,
+        "source_type": "manufacturer",
+        "trust_level": "highest",
+        "citation": {
+          "source": "arge_artikelattribute.attributwert",
+          "query": "attributname = 'EF010933'",
+          "raw_value": "4,45"
+        }
+      },
+      "heizleistung_7_35": {
+        "ef_code": "EF025889",
+        "value": 4,
+        "unit": "kW",
+        "source_type": "manufacturer",
+        "trust_level": "highest",
+        "citation": {
+          "source": "arge_artikelattribute.attributwert",
+          "query": "attributname = 'EF025889'"
+        }
+      }
+    },
+    
+    "etim_features": {
+      "_meta": {
+        "layer": "002-datasheet",
+        "source": "/api/citations/8738208680",
+        "audit_run_id": 562,
+        "audited_at": "2026-02-17T23:25:44.402358",
+        "model": "claude-sonnet-4-5-20250929"
+      },
+      "EF000351": {
+        "name": "Anzahl der Phasen",
+        "value": "1",
+        "source_type": "extraction",
+        "audit_status": "confirmed",
+        "citation": {
+          "document": "bodbsp_6720871915-000-00.pdf",
+          "document_type": "DB",
+          "page": 8,
+          "quote": "CS7000iAW 7 IR-S",
+          "confidence_note": "Designation -S indicates 1-phase operation as stated in document"
+        }
+      },
+      "EF000462": {
+        "name": "Art der Regelung",
+        "value": "Elektronisch",
+        "source_type": "extraction",
+        "audit_status": "confirmed",
+        "citation": {
+          "document": "bopapd_6721836891-000-00.pdf",
+          "document_type": "PA",
+          "page": 5,
+          "quote": "Die Compress 7000i AW/7400i AW ORMB/IRMB sind für einen modulierenden Betrieb ausgelegt. Durch Reduzierung der Drehzahl passen sie sich stufenlos dem Wärmebedarf an."
+        }
+      },
+      "EF003848": {
+        "name": "Fernbedienbar",
+        "value": true,
+        "source_type": "extraction",
+        "audit_status": "confirmed",
+        "citation": {
+          "document": "bopapd_6721836891-000-00.pdf",
+          "document_type": "PA",
+          "page": 20,
+          "quote": "CR 10 H Fernbedienung mit Luftfeuchtefühler"
+        }
+      },
+      "EF005502": {
+        "name": "Anschlussspannung",
+        "value": 230,
+        "unit": "V",
+        "source_type": "extraction",
+        "audit_status": "confirmed",
+        "citation": {
+          "document": "bopapd_6721836891-000-00.pdf",
+          "document_type": "PA",
+          "quote": "230 V AC"
+        }
+      },
+      "EF006333": {
+        "name": "Max. Heizungsvorlauftemperatur",
+        "value": 60,
+        "unit": "°C",
+        "source_type": "extraction",
+        "audit_status": "confirmed",
+        "citation": {
+          "document": "bodbed_6720869205-000-00.pdf",
+          "document_type": "DB",
+          "page": 2,
+          "quote": "Grenzwert der Betriebstemperatur des Heizwassers WTOL °C 60"
+        }
+      },
+      "EF006340": {
+        "name": "Luftdurchsatz",
+        "value": 2900,
+        "unit": "m³/h",
+        "source_type": "extraction",
+        "audit_status": "conflict",
+        "original_value": 4500,
+        "citation": {
+          "document": "bodbed_6720869205-000-00.pdf",
+          "document_type": "DB",
+          "page": 2,
+          "quote": "Für Luft-Wasser-Wärmepumpen: Nenn-Luftdurchsatz, außen m³/h 2900",
+          "conflict_note": "Document shows 2900 m³/h, not 4500 m³/h"
+        }
+      },
+      "EF009428": {
+        "name": "Datentransfer über Busverbindung",
+        "value": true,
+        "source_type": "extraction",
+        "audit_status": "confirmed",
+        "citation": {
+          "document": "bopapd_6721836891-000-00.pdf",
+          "document_type": "PA",
+          "page": 20,
+          "quote": "Die Bedieneinheit HPC 410 und das Heizkreismodul MM 100 werden über ein EMS-2-BUS-Kabel miteinander verbunden."
+        }
+      },
+      "EF009434": {
+        "name": "Art der Pumpe (interne Pumpe)",
+        "value": "Hocheffizienzpumpe",
+        "source_type": "extraction",
+        "audit_status": "confirmed",
+        "citation": {
+          "document": "bopapd_6721836891-000-00.pdf",
+          "document_type": "PA",
+          "page": 21,
+          "quote": "Hocheffizienzpumpen können ohne Trennrelais an SEC 20 und MM 200 angeschlossen werden."
+        }
+      },
+      "EF009436": {
+        "name": "Drehzahlregelung Pumpe",
+        "value": "Ja",
+        "source_type": "extraction",
+        "audit_status": "confirmed",
+        "citation": {
+          "document": "bopapd_6721836891-000-00.pdf",
+          "document_type": "PA",
+          "page": 21,
+          "quote": "Die Pumpe in der Inneneinheit AWM wird über ein 0...10-V-Signal gesteuert."
+        }
+      },
+      "EF009437": {
+        "name": "Art der Drehzahlregelung",
+        "value": "0-10V",
+        "source_type": "extraction",
+        "audit_status": "conflict",
+        "original_value": "PWM",
+        "citation": {
+          "document": "bopapd_6721836891-000-00.pdf",
+          "document_type": "PA",
+          "quote": "Die Pumpe in der Inneneinheit AWM wird über ein 0...10-V-Signal gesteuert.",
+          "conflict_note": "Document shows 0-10V analog control, not PWM"
+        }
+      },
+      "EF009438": {
+        "name": "Sanftanlauf eingebaut",
+        "value": true,
+        "source_type": "extraction",
+        "audit_status": "confirmed",
+        "citation": {
+          "document": "bopapd_6721836891-000-00.pdf",
+          "document_type": "PA",
+          "quote": "Der Kompressor wird über einen Frequenzumrichter (Inverter) mit Spannung versorgt und geregelt. Dadurch wird die Kompressordrehzahl immer bedarfsgerecht angepasst. Beim Kompressorstart wird ein hohes Anlaufdrehmoment mit gleichzeitig niedrigem Anlaufstrom sichergestellt."
+        }
+      },
+      "EF009440": {
+        "name": "Geeignet für aktive Kühlung",
+        "value": true,
+        "source_type": "extraction",
+        "audit_status": "confirmed",
+        "citation": {
+          "document": "bopapd_6721836891-000-00.pdf",
+          "document_type": "PA",
+          "page": 21,
+          "quote": "Die Wärmepumpe Compress 7000i AW/7400i AW ist mit dem Pufferspeicher BH ... nur für die Kühlung überhalb des Taupunkts über Wand-, Boden-, Deckenheizung oder Gebläsekonvektoren geeignet."
+        }
+      },
+      "EF013833": {
+        "name": "Kältemittel-Vorbefüllung",
+        "value": 1.75,
+        "unit": "kg",
+        "source_type": "extraction",
+        "audit_status": "conflict",
+        "original_value": 1.2,
+        "citation": {
+          "document": "bopapd_6721836891-000-00.pdf",
+          "document_type": "PA",
+          "page": 13,
+          "quote": "CS7000iAW 7 IRE-S R-410A 2088 1,75 3,654",
+          "conflict_note": "Document shows 1.75 kg, not 1.2 kg"
+        }
+      },
+      "EF016979": {
+        "name": "Global warming potential (GWP)",
+        "value": 2088,
+        "source_type": "extraction",
+        "audit_status": "conflict",
+        "original_value": 675,
+        "citation": {
+          "document": "bopapd_6721836891-000-00.pdf",
+          "document_type": "PA",
+          "page": 13,
+          "quote": "CS7000iAW 7 IRE-S R-410A 2088",
+          "conflict_note": "Document shows GWP of 2088 for R-410A, not 675"
+        }
+      },
+      "EF019047": {
+        "name": "ηs,h (35°C durchschnittlich)",
+        "value": 185,
+        "unit": "%",
+        "source_type": "extraction",
+        "audit_status": "confirmed",
+        "citation": {
+          "document": "bodbed_6720869205-000-00.pdf",
+          "document_type": "DB",
+          "page": 1,
+          "quote": "Jahreszeitbedingte Raumheizungs-Energieeffizienz (Niedertemperaturanwendung, durchschnittliche Klimaverhältnisse) ηS % 185"
+        }
+      },
+      "EF019050": {
+        "name": "ηs,h (55°C durchschnittlich)",
+        "value": 141,
+        "unit": "%",
+        "source_type": "extraction",
+        "audit_status": "confirmed",
+        "citation": {
+          "document": "bodbed_6720869205-000-00.pdf",
+          "document_type": "DB",
+          "page": 1,
+          "quote": "Jahreszeitbedingte Raumheizungs-Energieeffizienz (durchschnittliche Klimaverhältnisse) ηS % 141"
+        }
+      },
+      "EF019182": {
+        "name": "Energieeffizienzklasse Raumheizung (35°C)",
+        "value": "A++",
+        "source_type": "extraction",
+        "audit_status": "confirmed",
+        "citation": {
+          "document": "boelel_8738208680-000-00.pdf",
+          "document_type": "EL",
+          "page": 1,
+          "quote": "35°C A++"
+        }
+      },
+      "EF019185": {
+        "name": "Energieeffizienzklasse Raumheizung (55°C)",
+        "value": "A++",
+        "source_type": "extraction",
+        "audit_status": "confirmed",
+        "citation": {
+          "document": "boelel_8738208680-000-00.pdf",
+          "document_type": "EL",
+          "page": 1,
+          "quote": "55°C A++"
+        }
+      },
+      "EF024945": {
+        "name": "Typ Kältemittel",
+        "value": "R-410A",
+        "source_type": "extraction",
+        "audit_status": "conflict",
+        "original_value": "R32",
+        "citation": {
+          "document": "bopapd_6721836891-000-00.pdf",
+          "document_type": "PA",
+          "page": 13,
+          "quote": "CS7000iAW 7 IRE-S R-410A",
+          "conflict_note": "Document shows R-410A refrigerant, not R32"
+        }
+      },
+      "EF025880": {
+        "name": "Schallleistungspegel (0/35°C)",
+        "value": 36,
+        "unit": "dB(A)",
+        "source_type": "extraction",
+        "audit_status": "conflict",
+        "original_value": 58,
+        "citation": {
+          "document": "bodbed_6720869205-000-00.pdf",
+          "document_type": "DB",
+          "page": 1,
+          "quote": "Schallleistungspegel außen LWA dB 36",
+          "conflict_note": "Document shows 36 dB, not 58 dBA"
+        }
+      },
+      "EF026126": {
+        "name": "Datentransfer über Internet",
+        "value": true,
+        "source_type": "extraction",
+        "audit_status": "confirmed",
+        "citation": {
+          "document": "bopapd_6721836891-000-00.pdf",
+          "document_type": "PA",
+          "page": 28,
+          "quote": "Zur weiteren Ausstattung der Bedieneinheit HPC 410 gehören eine Internetschnittstelle"
+        }
+      },
+      "EF026387": {
+        "name": "Modulierender Kompressor",
+        "value": true,
+        "source_type": "extraction",
+        "audit_status": "confirmed",
+        "citation": {
+          "document": "bopapd_6721836891-000-00.pdf",
+          "document_type": "PA",
+          "page": 5,
+          "quote": "Die Compress 7000i AW/7400i AW ORMB/IRMB sind für einen modulierenden Betrieb ausgelegt. Durch Reduzierung der Drehzahl passen sie sich stufenlos dem Wärmebedarf an."
+        }
+      }
+    }
+  },
+  
+  "media": {
+    "images": [
+      {
+        "filename": "bob_00335430_druck.jpg",
+        "usage": "Druck",
+        "type": "base",
+        "url": "https://media.bosch-thermotechnology.com/images/bob_00335430_druck.jpg"
+      },
+      {
+        "filename": "bob_00335430_web.jpg",
+        "usage": "Web",
+        "type": "base",
+        "url": "https://media.bosch-thermotechnology.com/images/bob_00335430_web.jpg"
+      },
+      {
+        "filename": "box_00336400_druck.png",
+        "usage": "Druck",
+        "type": "extra",
+        "description": "Titel"
+      },
+      {
+        "filename": "box_00369075_druck.png",
+        "usage": "Druck",
+        "type": "extra",
+        "description": "Verkleidung"
+      },
+      {
+        "filename": "box_00481727_druck.png",
+        "usage": "Druck",
+        "type": "extra",
+        "description": "Kaeltemittelkreis"
+      }
+    ],
+    "documents": [
+      {
+        "filename": "bodbsp_6720871915-000-00.pdf",
+        "type": "DB",
+        "description": "Datenblatt Spezifikation",
+        "document_id": "0711:document:bosch:bodbsp_6720871915-000-00.pdf:v1"
+      },
+      {
+        "filename": "bodbed_6720869205-000-00.pdf",
+        "type": "DB",
+        "description": "Bedienungsanleitung/Datenblatt",
+        "document_id": "0711:document:bosch:bodbed_6720869205-000-00.pdf:v1"
+      },
+      {
+        "filename": "boelel_8738208680-000-00.pdf",
+        "type": "EL",
+        "description": "Energielabel",
+        "document_id": "0711:document:bosch:boelel_8738208680-000-00.pdf:v1"
+      },
+      {
+        "filename": "bopapd_6721836891-000-00.pdf",
+        "type": "PA",
+        "description": "Produktdatenblatt/Planungsunterlage",
+        "document_id": "0711:document:bosch:bopapd_6721836891-000-00.pdf:v1"
+      }
+    ],
+    "cad": [
+      {"filename": "bo2d_o543674v92.dxf", "type": "2D", "format": "dxf"},
+      {"filename": "bo2d_o543674v93.dwg", "type": "2D", "format": "dwg"},
+      {"filename": "bo2f_o543672v92.dxf", "type": "2F", "format": "dxf"},
+      {"filename": "bo2f_o543672v93.dwg", "type": "2F", "format": "dwg"},
+      {"filename": "bo2s_o543673v92.dxf", "type": "2S", "format": "dxf"},
+      {"filename": "bo2s_o543673v93.dwg", "type": "2S", "format": "dwg"},
+      {"filename": "bo3c_o543675v92.dxf", "type": "3C", "format": "dxf"},
+      {"filename": "bo3c_o543675v93.dwg", "type": "3C", "format": "dwg"}
+    ]
+  },
+  
+  "audit_summary": {
+    "total_features": 88,
+    "confirmed": 55,
+    "likely": 6,
+    "conflict": 30,
+    "not_found": 39,
+    "total_citations": 138,
+    "last_audit": "2026-02-17T23:25:44.402358",
+    "audit_model": "claude-sonnet-4-5-20250929"
+  },
+  
+  "conflicts": [
+    {
+      "ef_code": "EF006340",
+      "name": "Luftdurchsatz",
+      "original_value": "4500 m³/h",
+      "document_value": "2900 m³/h",
+      "resolution": "use_document",
+      "document": "bodbed_6720869205-000-00.pdf"
+    },
+    {
+      "ef_code": "EF009437",
+      "name": "Art der Drehzahlregelung",
+      "original_value": "PWM",
+      "document_value": "0-10V",
+      "resolution": "use_document",
+      "document": "bopapd_6721836891-000-00.pdf"
+    },
+    {
+      "ef_code": "EF013833",
+      "name": "Kältemittel-Vorbefüllung",
+      "original_value": "1.2 kg",
+      "document_value": "1.75 kg",
+      "resolution": "use_document",
+      "document": "bopapd_6721836891-000-00.pdf"
+    },
+    {
+      "ef_code": "EF016979",
+      "name": "GWP",
+      "original_value": "675",
+      "document_value": "2088",
+      "resolution": "use_document",
+      "document": "bopapd_6721836891-000-00.pdf",
+      "note": "R-410A has GWP 2088, not 675 (R32)"
+    },
+    {
+      "ef_code": "EF024945",
+      "name": "Typ Kältemittel",
+      "original_value": "R32",
+      "document_value": "R-410A",
+      "resolution": "use_document",
+      "document": "bopapd_6721836891-000-00.pdf"
+    },
+    {
+      "ef_code": "EF025880",
+      "name": "Schallleistungspegel",
+      "original_value": "58 dBA",
+      "document_value": "36 dB",
+      "resolution": "use_document",
+      "document": "bodbed_6720869205-000-00.pdf"
+    }
+  ],
+  
+  "meta": {
+    "created_at": "2026-02-23T06:45:00.000Z",
+    "created_by": "bombas@0711.io",
+    "source_tables": [
+      "products",
+      "arge_artikelattribute",
+      "artikel_media_zuordnungen"
+    ],
+    "citation_api": "/api/citations/8738208680",
+    "is_test": true
+  }
+}

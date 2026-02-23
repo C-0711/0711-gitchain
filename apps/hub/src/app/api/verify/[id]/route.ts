@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-const API_URL = process.env.API_URL || "http://localhost:3000";
+const API_URL = process.env.API_URL || "http://localhost:3100";
 
 export async function GET(
   request: NextRequest,

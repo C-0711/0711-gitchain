@@ -4,11 +4,11 @@ export default function TypeScriptSDKPage() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-12">
       <div className="mb-8">
-        <Link href="/docs" className="text-emerald-400 hover:underline text-sm">
+        <Link href="/docs" className="text-emerald-600 hover:underline text-sm">
           ← Back to Docs
         </Link>
         <h1 className="text-3xl font-bold mt-4 mb-4">TypeScript SDK</h1>
-        <p className="text-gray-400">
+        <p className="text-gray-600">
           Official TypeScript/JavaScript SDK for GitChain.
         </p>
       </div>
@@ -16,8 +16,8 @@ export default function TypeScriptSDKPage() {
       <div className="space-y-8">
         <section>
           <h2 className="text-xl font-semibold mb-4">Installation</h2>
-          <div className="bg-gray-900 rounded-lg p-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`npm install @0711/sdk
+          <div className="bg-white rounded-lg p-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`npm install @0711/sdk
 # or
 yarn add @0711/sdk
 # or
@@ -27,8 +27,8 @@ pnpm add @0711/sdk`}</code></pre>
 
         <section>
           <h2 className="text-xl font-semibold mb-4">Quick Start</h2>
-          <div className="bg-gray-900 rounded-lg p-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`import { GitChain } from "@0711/sdk";
+          <div className="bg-white rounded-lg p-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`import { GitChain } from "@0711/sdk";
 
 // Initialize client
 const client = new GitChain("gc_live_your_api_key");
@@ -48,9 +48,9 @@ console.log(context.formatted);`}</code></pre>
           <h2 className="text-xl font-semibold mb-4">API Reference</h2>
           
           <h3 className="font-semibold mt-6 mb-2">client.inject(options)</h3>
-          <p className="text-gray-400 mb-4">Inject verified context from containers.</p>
-          <div className="bg-gray-900 rounded-lg p-4 mb-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`const context = await client.inject({
+          <p className="text-gray-600 mb-4">Inject verified context from containers.</p>
+          <div className="bg-white rounded-lg p-4 mb-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`const context = await client.inject({
   containers: string[],    // Container IDs
   verify?: boolean,        // Verify on blockchain (default: true)
   format?: "markdown" | "json" | "yaml",
@@ -69,8 +69,8 @@ console.log(context.formatted);`}</code></pre>
           </div>
 
           <h3 className="font-semibold mt-6 mb-2">client.containers.list(options?)</h3>
-          <div className="bg-gray-900 rounded-lg p-4 mb-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`const { containers, total } = await client.containers.list({
+          <div className="bg-white rounded-lg p-4 mb-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`const { containers, total } = await client.containers.list({
   type?: string,
   namespace?: string,
   limit?: number,
@@ -79,15 +79,15 @@ console.log(context.formatted);`}</code></pre>
           </div>
 
           <h3 className="font-semibold mt-6 mb-2">client.containers.get(id)</h3>
-          <div className="bg-gray-900 rounded-lg p-4 mb-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`const container = await client.containers.get(
+          <div className="bg-white rounded-lg p-4 mb-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`const container = await client.containers.get(
   "0711:product:acme:widget-001:v1"
 );`}</code></pre>
           </div>
 
           <h3 className="font-semibold mt-6 mb-2">client.containers.create(data)</h3>
-          <div className="bg-gray-900 rounded-lg p-4 mb-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`const container = await client.containers.create({
+          <div className="bg-white rounded-lg p-4 mb-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`const container = await client.containers.create({
   type: "product",
   namespace: "acme",
   identifier: "widget-002",
@@ -97,8 +97,8 @@ console.log(context.formatted);`}</code></pre>
           </div>
 
           <h3 className="font-semibold mt-6 mb-2">client.verify(id)</h3>
-          <div className="bg-gray-900 rounded-lg p-4 mb-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`const verification = await client.verify(
+          <div className="bg-white rounded-lg p-4 mb-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`const verification = await client.verify(
   "0711:product:acme:widget-001:v1"
 );
 
@@ -113,8 +113,8 @@ console.log(context.formatted);`}</code></pre>
 
         <section>
           <h2 className="text-xl font-semibold mb-4">Usage with LLMs</h2>
-          <div className="bg-gray-900 rounded-lg p-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`import { GitChain } from "@0711/sdk";
+          <div className="bg-white rounded-lg p-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`import { GitChain } from "@0711/sdk";
 import OpenAI from "openai";
 
 const gitchain = new GitChain("gc_live_...");
@@ -142,8 +142,8 @@ const response = await openai.chat.completions.create({
 
         <section>
           <h2 className="text-xl font-semibold mb-4">Error Handling</h2>
-          <div className="bg-gray-900 rounded-lg p-4">
-            <pre className="text-sm"><code className="text-emerald-400">{`import { GitChain, GitChainError } from "@0711/sdk";
+          <div className="bg-white rounded-lg p-4">
+            <pre className="text-sm"><code className="text-emerald-600">{`import { GitChain, GitChainError } from "@0711/sdk";
 
 try {
   const context = await client.inject({...});
@@ -156,11 +156,11 @@ try {
           </div>
         </section>
 
-        <div className="mt-8 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
+        <div className="mt-8 p-4 bg-blue-100/20 border border-blue-700 rounded-lg">
           <h3 className="font-semibold mb-2">📦 Package Info</h3>
-          <p className="text-sm text-gray-400">
-            <strong>npm:</strong> <code className="text-emerald-400">@0711/sdk</code><br/>
-            <strong>GitHub:</strong> <a href="https://github.com/C-0711/0711-gitchain" className="text-emerald-400 hover:underline">C-0711/0711-gitchain</a>
+          <p className="text-sm text-gray-600">
+            <strong>npm:</strong> <code className="text-emerald-600">@0711/sdk</code><br/>
+            <strong>GitHub:</strong> <a href="https://github.com/C-0711/0711-gitchain" className="text-emerald-600 hover:underline">C-0711/0711-gitchain</a>
           </p>
         </div>
       </div>
