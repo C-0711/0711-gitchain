@@ -1,7 +1,29 @@
 {
   "name": "@0711/inject",
   "version": "0.1.0",
-  "description": "Context injection for AI agents - the core GitChain innovation",
+  "description": "Verified context injection for AI agents — the core GitChain innovation",
+  "license": "Apache-2.0",
+  "author": "0711 Intelligence <hello@0711.io>",
+  "homepage": "https://gitchain.0711.io",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/C-0711/0711-gitchain.git",
+    "directory": "packages/inject"
+  },
+  "bugs": {
+    "url": "https://github.com/C-0711/0711-gitchain/issues"
+  },
+  "keywords": [
+    "ai",
+    "llm",
+    "context",
+    "injection",
+    "blockchain",
+    "verification",
+    "rag",
+    "gitchain",
+    "knowledge-base"
+  ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -11,11 +33,17 @@
       "import": "./dist/index.js"
     }
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc -w",
     "test": "jest",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "ioredis": "^5.3.0"
@@ -25,8 +53,16 @@
     "@types/node": "^20.0.0"
   },
   "peerDependencies": {
-    "@0711/core": "workspace:*",
-    "@0711/chain": "workspace:*",
-    "@0711/git": "workspace:*"
+    "@0711/core": ">=0.1.0",
+    "@0711/chain": ">=0.1.0",
+    "@0711/git": ">=0.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@0711/core": { "optional": false },
+    "@0711/chain": { "optional": true },
+    "@0711/git": { "optional": true }
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

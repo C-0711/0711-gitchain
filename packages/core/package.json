@@ -1,7 +1,23 @@
 {
   "name": "@0711/core",
   "version": "0.1.0",
-  "description": "Container schema, validation, and types for GitChain",
+  "description": "GitChain core types, schemas, and validation utilities",
+  "license": "Apache-2.0",
+  "author": "0711 Intelligence <hello@0711.io>",
+  "homepage": "https://gitchain.0711.io",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/C-0711/0711-gitchain.git",
+    "directory": "packages/core"
+  },
+  "keywords": [
+    "gitchain",
+    "types",
+    "schema",
+    "validation",
+    "ai",
+    "context"
+  ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -11,11 +27,17 @@
       "import": "./dist/index.js"
     }
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc -w",
     "test": "jest",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "zod": "^3.22.0"
@@ -23,5 +45,8 @@
   "devDependencies": {
     "typescript": "^5.3.0",
     "@types/node": "^20.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

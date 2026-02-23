@@ -1,6 +1,8 @@
 {
   "name": "0711-gitchain",
   "version": "0.1.0",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@10.29.1",
   "private": true,
   "description": "Blockchain-verified context injection for AI agents",
   "repository": {

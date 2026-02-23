@@ -20,7 +20,7 @@ export function parseContainerId(id: string): ParsedContainerId {
   const parts = id.split(":");
 
   if (parts.length !== 5 || parts[0] !== "0711") {
-    throw new Error(\`Invalid container ID format: \${id}\`);
+    throw new Error(`Invalid container ID format: ${id}`);
   }
 
   const [, type, namespace, identifier, versionStr] = parts;
@@ -31,10 +31,10 @@ export function parseContainerId(id: string): ParsedContainerId {
   } else if (versionStr.startsWith("v")) {
     version = parseInt(versionStr.slice(1), 10);
     if (isNaN(version)) {
-      throw new Error(\`Invalid version in container ID: \${versionStr}\`);
+      throw new Error(`Invalid version in container ID: ${versionStr}`);
     }
   } else {
-    throw new Error(\`Invalid version format: \${versionStr}\`);
+    throw new Error(`Invalid version format: ${versionStr}`);
   }
 
   return { type, namespace, identifier, version };
@@ -49,8 +49,8 @@ export function buildContainerId(
   identifier: string,
   version: number | "latest" = "latest"
 ): string {
-  const versionStr = version === "latest" ? "latest" : \`v\${version}\`;
-  return \`0711:\${type}:\${namespace}:\${identifier}:\${versionStr}\`;
+  const versionStr = version === "latest" ? "latest" : `v${version}`;
+  return `0711:${type}:${namespace}:${identifier}:${versionStr}`;
 }
 
 /**
