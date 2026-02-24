@@ -12,10 +12,12 @@ import { Pool } from "pg";
 // Services
 import { AuthService, verifyToken, isValidApiKeyFormat, hashApiKey } from "./services/auth";
 import { ContainerService } from "./services/containers";
+import { OrganizationService } from "./services/organizations";
 
 // Routes
 import { createAuthRouter } from "./routes/auth";
 import { createContainersRouter } from "./routes/containers";
+import { createOrganizationsRouter } from "./routes/organizations";
 
 // ===========================================
 // CONFIG
@@ -105,6 +107,7 @@ const db = {
 
 const authService = new AuthService(db);
 const containerService = new ContainerService(db);
+const organizationService = new OrganizationService(db);
 
 // ===========================================
 // APP
@@ -194,6 +197,9 @@ app.use("/auth", createAuthRouter(authService));
 
 // Container routes
 app.use("/api/containers", createContainersRouter(containerService));
+
+// Organization routes
+app.use("/api/organizations", createOrganizationsRouter(organizationService));
 
 // Inject endpoint
 app.post("/api/inject", async (req: Request, res: Response, next: NextFunction) => {
