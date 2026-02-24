@@ -2,215 +2,272 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import AppShell, { PageHeader, Card, SectionTitle, theme as t } from "@/components/AppShell";
+import Link from "next/link";
 
-const mono = "'SFMono-Regular','Consolas','Liberation Mono','Menlo',monospace";
+type ContainerType = "product" | "campaign" | "project" | "memory" | "knowledge";
+type Visibility = "public" | "private" | "internal";
 
-const containerTypes = [
-  { value: "product", label: "Product", desc: "Physical or digital products with specifications" },
-  { value: "campaign", label: "Campaign", desc: "Marketing campaigns and advertising materials" },
-  { value: "project", label: "Project", desc: "Project documentation and artifacts" },
-  { value: "knowledge", label: "Knowledge", desc: "Knowledge bases and documentation" },
-  { value: "memory", label: "Memory", desc: "Personal or organizational memories" },
+const containerTypes: { value: ContainerType; label: string; icon: string; description: string }[] = [
+  { value: "product", label: "Product", icon: "📦", description: "Product data, specs, and documentation" },
+  { value: "knowledge", label: "Knowledge", icon: "📚", description: "Documentation, guides, and references" },
+  { value: "project", label: "Project", icon: "🎯", description: "Project context and briefings" },
+  { value: "campaign", label: "Campaign", icon: "📢", description: "Marketing campaigns and assets" },
+  { value: "memory", label: "Memory", icon: "🧠", description: "AI agent memory and preferences" },
+];
+
+const visibilityOptions: { value: Visibility; label: string; icon: string; description: string }[] = [
+  { value: "public", label: "Public", icon: "🌐", description: "Anyone can see and inject this container" },
+  { value: "private", label: "Private", icon: "🔒", description: "Only you and collaborators can access" },
+  { value: "internal", label: "Internal", icon: "🏢", description: "Only organization members can access" },
 ];
 
 export default function NewContainerPage() {
   const router = useRouter();
-  const [namespace, setNamespace] = useState("");
-  const [type, setType] = useState("product");
-  const [identifier, setIdentifier] = useState("");
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    namespace: "",
+    type: "knowledge" as ContainerType,
+    visibility: "private" as Visibility,
+    description: "",
+  });
+
+  // Generate identifier from name
+  const identifier = formData.name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
+    setError(null);
+    setIsSubmitting(true);
 
     try {
-      const res = await fetch("/api/containers", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({ namespace, type, identifier, name, description }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Failed to create container");
+      // Get auth token from localStorage
+      const token = localStorage.getItem("gitchain_token");
+      if (!token) {
+        router.push("/auth/login?redirect=/containers/new");
         return;
       }
 
-      router.push(`/containers/${data.id}`);
+      const response = await fetch("/api/containers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          type: formData.type,
+          namespace: formData.namespace || "personal",
+          identifier,
+          description: formData.description,
+          visibility: formData.visibility,
+          data: {
+            name: formData.name,
+            description: formData.description,
+            created: new Date().toISOString(),
+          },
+          meta: {
+            readme: `# ${formData.name}\n\n${formData.description || "No description provided."}\n`,
+          },
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to create container");
+      }
+
+      // Redirect to the new container
+      router.push(`/containers/${result.container.container_id}`);
     } catch (err) {
-      setError("Network error. Please try again.");
+      setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const fullId = namespace && identifier ? `${namespace}:${type}:${identifier}` : "";
-
   return (
-    <AppShell>
-      <div style={{ maxWidth: 700, margin: "0 auto", padding: "32px 24px" }}>
-        <PageHeader title="New Container" description="Create a versioned knowledge container" />
+    <div className="min-h-screen bg-[#0d1117]">
+      {/* Header */}
+      <div className="border-b border-[#30363d] bg-[#161b22]">
+        <div className="max-w-3xl mx-auto px-6 py-6">
+          <h1 className="text-2xl font-semibold text-white">Create a new container</h1>
+          <p className="text-[#8b949e] mt-1">
+            A container holds your knowledge, data, and context for AI agents.
+          </p>
+        </div>
+      </div>
 
-        <form onSubmit={handleSubmit}>
+      {/* Form */}
+      <div className="max-w-3xl mx-auto px-6 py-8">
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Error */}
           {error && (
-            <div style={{
-              padding: "12px 16px", marginBottom: 24,
-              backgroundColor: "#ffebe9", border: "1px solid #cf222e",
-              borderRadius: 6, color: "#cf222e", fontSize: 14,
-            }}>{error}</div>
+            <div className="p-4 bg-red-500/10 border border-red-500/50 rounded-md text-red-400">
+              {error}
+            </div>
           )}
 
-          <Card>
-            <SectionTitle>Container Details</SectionTitle>
-
-            <div style={{ display: "grid", gap: 20 }}>
-              {/* Namespace */}
-              <div>
-                <label style={{ display: "block", fontSize: 14, fontWeight: 500, color: t.fg, marginBottom: 6 }}>
-                  Namespace <span style={{ color: "#cf222e" }}>*</span>
+          {/* Name & Namespace */}
+          <div className="space-y-4">
+            <div className="flex gap-4 items-end">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-white mb-2">
+                  Owner <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
-                  value={namespace}
-                  onChange={(e) => setNamespace(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                  placeholder="e.g., bosch, acme"
+                  value={formData.namespace}
+                  onChange={(e) => setFormData({ ...formData, namespace: e.target.value })}
+                  placeholder="your-namespace"
+                  className="w-full px-3 py-2 bg-[#0d1117] border border-[#30363d] rounded-md text-white placeholder-[#484f58] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] outline-none"
+                />
+              </div>
+              <span className="text-[#8b949e] pb-2 text-xl">/</span>
+              <div className="flex-[2]">
+                <label className="block text-sm font-medium text-white mb-2">
+                  Container name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="my-container"
                   required
-                  style={{
-                    width: "100%", padding: "10px 12px", fontSize: 14, fontFamily: mono,
-                    border: `1px solid ${t.border}`, borderRadius: 6, backgroundColor: "#f6f8fa",
-                  }}
-                />
-                <p style={{ fontSize: 12, color: t.fgMuted, marginTop: 4 }}>Lowercase letters, numbers, and hyphens only</p>
-              </div>
-
-              {/* Type */}
-              <div>
-                <label style={{ display: "block", fontSize: 14, fontWeight: 500, color: t.fg, marginBottom: 8 }}>
-                  Container Type <span style={{ color: "#cf222e" }}>*</span>
-                </label>
-                <div style={{ display: "grid", gap: 8 }}>
-                  {containerTypes.map(ct => (
-                    <label
-                      key={ct.value}
-                      style={{
-                        display: "flex", alignItems: "flex-start", gap: 10, padding: 12,
-                        border: `1px solid ${type === ct.value ? "#238636" : t.border}`,
-                        borderRadius: 6, cursor: "pointer",
-                        backgroundColor: type === ct.value ? "#dafbe1" : "#fff",
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        name="type"
-                        value={ct.value}
-                        checked={type === ct.value}
-                        onChange={(e) => setType(e.target.value)}
-                        style={{ marginTop: 2 }}
-                      />
-                      <div>
-                        <div style={{ fontWeight: 500, fontSize: 14, color: t.fg }}>{ct.label}</div>
-                        <div style={{ fontSize: 12, color: t.fgMuted }}>{ct.desc}</div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Identifier */}
-              <div>
-                <label style={{ display: "block", fontSize: 14, fontWeight: 500, color: t.fg, marginBottom: 6 }}>
-                  Identifier <span style={{ color: "#cf222e" }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ""))}
-                  placeholder="e.g., BCS-VT-36-4"
-                  required
-                  style={{
-                    width: "100%", padding: "10px 12px", fontSize: 14, fontFamily: mono,
-                    border: `1px solid ${t.border}`, borderRadius: 6, backgroundColor: "#f6f8fa",
-                  }}
-                />
-              </div>
-
-              {/* Preview */}
-              {fullId && (
-                <div style={{ padding: 12, backgroundColor: "#f6f8fa", borderRadius: 6 }}>
-                  <div style={{ fontSize: 12, color: t.fgMuted, marginBottom: 4 }}>Container ID</div>
-                  <code style={{ fontFamily: mono, fontSize: 14, color: t.fg }}>{fullId}</code>
-                </div>
-              )}
-
-              {/* Name */}
-              <div>
-                <label style={{ display: "block", fontSize: 14, fontWeight: 500, color: t.fg, marginBottom: 6 }}>Display Name</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g., Compress 3000 AWS Heat Pump"
-                  style={{
-                    width: "100%", padding: "10px 12px", fontSize: 14,
-                    border: `1px solid ${t.border}`, borderRadius: 6, backgroundColor: "#f6f8fa",
-                  }}
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <label style={{ display: "block", fontSize: 14, fontWeight: 500, color: t.fg, marginBottom: 6 }}>Description</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
-                  placeholder="Optional description of this container"
-                  style={{
-                    width: "100%", padding: "10px 12px", fontSize: 14,
-                    border: `1px solid ${t.border}`, borderRadius: 6, backgroundColor: "#f6f8fa", resize: "vertical",
-                  }}
+                  className="w-full px-3 py-2 bg-[#0d1117] border border-[#30363d] rounded-md text-white placeholder-[#484f58] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] outline-none"
                 />
               </div>
             </div>
+            {identifier && (
+              <p className="text-sm text-[#8b949e]">
+                Container ID: <code className="text-[#58a6ff]">0711:{formData.type}:{formData.namespace || "personal"}:{identifier}:v1</code>
+              </p>
+            )}
+          </div>
 
-            <div style={{ marginTop: 24, display: "flex", gap: 12 }}>
-              <button
-                type="submit"
-                disabled={loading || !namespace || !identifier}
-                style={{
-                  padding: "10px 20px", fontSize: 14, fontWeight: 600,
-                  backgroundColor: !loading && namespace && identifier ? "#238636" : "#8b949e",
-                  color: "#fff", border: "none", borderRadius: 6,
-                  cursor: !loading && namespace && identifier ? "pointer" : "not-allowed",
-                }}
-              >
-                {loading ? "Creating..." : "Create container"}
-              </button>
-              <button
-                type="button"
-                onClick={() => router.back()}
-                style={{
-                  padding: "10px 20px", fontSize: 14, fontWeight: 500,
-                  backgroundColor: "#fff", color: t.fg, border: `1px solid ${t.border}`,
-                  borderRadius: 6, cursor: "pointer",
-                }}
-              >
-                Cancel
-              </button>
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-white mb-2">
+              Description <span className="text-[#8b949e]">(optional)</span>
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="A short description of what this container holds..."
+              rows={3}
+              className="w-full px-3 py-2 bg-[#0d1117] border border-[#30363d] rounded-md text-white placeholder-[#484f58] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] outline-none resize-none"
+            />
+          </div>
+
+          {/* Divider */}
+          <hr className="border-[#30363d]" />
+
+          {/* Container Type */}
+          <div>
+            <label className="block text-sm font-medium text-white mb-4">
+              Container type
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {containerTypes.map((type) => (
+                <button
+                  key={type.value}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, type: type.value })}
+                  className={`p-4 rounded-lg border text-left transition-all ${
+                    formData.type === type.value
+                      ? "border-[#238636] bg-[#238636]/10"
+                      : "border-[#30363d] bg-[#161b22] hover:border-[#484f58]"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xl">{type.icon}</span>
+                    <span className="font-medium text-white">{type.label}</span>
+                  </div>
+                  <p className="text-xs text-[#8b949e]">{type.description}</p>
+                </button>
+              ))}
             </div>
-          </Card>
+          </div>
+
+          {/* Divider */}
+          <hr className="border-[#30363d]" />
+
+          {/* Visibility */}
+          <div>
+            <label className="block text-sm font-medium text-white mb-4">
+              Visibility
+            </label>
+            <div className="space-y-3">
+              {visibilityOptions.map((option) => (
+                <label
+                  key={option.value}
+                  className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-all ${
+                    formData.visibility === option.value
+                      ? "border-[#238636] bg-[#238636]/10"
+                      : "border-[#30363d] bg-[#161b22] hover:border-[#484f58]"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="visibility"
+                    value={option.value}
+                    checked={formData.visibility === option.value}
+                    onChange={() => setFormData({ ...formData, visibility: option.value })}
+                    className="mt-1 accent-[#238636]"
+                  />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{option.icon}</span>
+                      <span className="font-medium text-white">{option.label}</span>
+                    </div>
+                    <p className="text-sm text-[#8b949e] mt-1">{option.description}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Info Box */}
+          <div className="p-4 bg-[#161b22] border border-[#30363d] rounded-lg">
+            <div className="flex gap-3">
+              <span className="text-xl">💡</span>
+              <div className="text-sm text-[#8b949e]">
+                <p className="mb-2">
+                  <strong className="text-white">Private containers</strong> are only visible to you and people you explicitly invite.
+                </p>
+                <p>
+                  You can change visibility and add collaborators anytime in container settings.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <hr className="border-[#30363d]" />
+
+          {/* Submit */}
+          <div className="flex items-center justify-between">
+            <Link
+              href="/containers"
+              className="text-[#8b949e] hover:text-white transition-colors"
+            >
+              Cancel
+            </Link>
+            <button
+              type="submit"
+              disabled={!formData.name || isSubmitting}
+              className="px-6 py-2 bg-[#238636] hover:bg-[#2ea043] disabled:bg-[#238636]/50 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors"
+            >
+              {isSubmitting ? "Creating..." : "Create container"}
+            </button>
+          </div>
         </form>
       </div>
-    </AppShell>
+    </div>
   );
 }
