@@ -1,34 +1,55 @@
 /**
  * Database connection pool for GitChain Hub
+ *
+ * SECURITY: Database credentials must be provided via environment variables.
+ * No fallback values are allowed in production.
  */
 
 import { Pool, PoolClient } from "pg";
+import { getUserIdFromAuthHeader } from "./auth";
+
+// ===========================================
+// ENVIRONMENT VALIDATION
+// ===========================================
+
+function getRequiredDbConfig() {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  // In production, all DB config must be explicitly set
+  if (isProduction) {
+    if (!process.env.DB_PASSWORD && !process.env.DATABASE_URL) {
+      throw new Error(
+        "SECURITY ERROR: DB_PASSWORD or DATABASE_URL must be set in production. " +
+          "Never use fallback database credentials."
+      );
+    }
+  }
+
+  // Use DATABASE_URL if provided (takes precedence)
+  if (process.env.DATABASE_URL) {
+    return { connectionString: process.env.DATABASE_URL };
+  }
+
+  // Otherwise use individual config vars
+  return {
+    host: process.env.DB_HOST || "localhost",
+    port: parseInt(process.env.DB_PORT || "5440"),
+    database: process.env.DB_NAME || "gitchain",
+    user: process.env.DB_USER || "gitchain",
+    password: process.env.DB_PASSWORD || (isProduction ? undefined : "gitchain2026"),
+  };
+}
 
 export const pool = new Pool({
-  host: process.env.DB_HOST || "localhost",
-  port: parseInt(process.env.DB_PORT || "5440"),
-  database: process.env.DB_NAME || "gitchain",
-  user: process.env.DB_USER || "gitchain",
-  password: process.env.DB_PASSWORD || "gitchain2026",
+  ...getRequiredDbConfig(),
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
 });
 
-// Helper to get user ID from JWT token
+// Helper to get user ID from JWT token - uses proper JWT verification
 export function getUserIdFromToken(authHeader: string | null): string | null {
-  if (!authHeader?.startsWith("Bearer ")) {
-    return null;
-  }
-  try {
-    const token = authHeader.slice(7);
-    const payload = JSON.parse(
-      Buffer.from(token.split(".")[1], "base64").toString()
-    );
-    return payload.userId || null;
-  } catch {
-    return null;
-  }
+  return getUserIdFromAuthHeader(authHeader);
 }
 
 // Helper to check org membership
