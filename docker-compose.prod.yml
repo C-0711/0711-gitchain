@@ -1,28 +1,218 @@
-version: "3.8"
+# GitChain Production Docker Compose
+# Usage: docker compose -f docker-compose.prod.yml up -d
+#
+# Required environment variables (set in .env):
+# - DATABASE_PASSWORD
+# - JWT_SECRET
+# - API_KEY_SALT
 
 services:
+  # ===========================================
+  # PostgreSQL Database
+  # ===========================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: gitchain-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gitchain
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD is required}
+      POSTGRES_DB: gitchain
+    volumes:
+      - gitchain-pgdata:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gitchain -d gitchain"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - gitchain-internal
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ===========================================
+  # Redis Cache
+  # ===========================================
+  redis:
+    image: redis:7-alpine
+    container_name: gitchain-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - gitchain-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gitchain-internal
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ===========================================
+  # GitChain API
+  # ===========================================
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    ports:
-      - "3100:3000"
+    container_name: gitchain-api
+    restart: unless-stopped
     environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - GITCHAIN_DATA_DIR=/data/repos
-      - REDIS_HOST=redis
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://gitchain:${DATABASE_PASSWORD}@postgres:5432/gitchain
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      API_KEY_SALT: ${API_KEY_SALT:-default-salt-change-me}
+      GITCHAIN_DATA_DIR: /data/repos
+      # Blockchain (optional)
+      BASE_MAINNET_RPC: ${BASE_MAINNET_RPC:-https://mainnet.base.org}
+      CONTENT_CERTIFICATE_ADDRESS: ${CONTENT_CERTIFICATE_ADDRESS:-}
+      DEPLOYER_PRIVATE_KEY: ${DEPLOYER_PRIVATE_KEY:-}
+      # IPFS (optional)
+      PINATA_JWT: ${PINATA_JWT:-}
+      PINATA_GATEWAY: ${PINATA_GATEWAY:-gateway.pinata.cloud}
     volumes:
-      - /home/christoph.bertsch/0711/gitchain-data/repos:/data/repos
+      - gitchain-repos:/data/repos
     depends_on:
-      - redis
-    restart: unless-stopped
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - gitchain-internal
+      - gitchain-external
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
 
-  redis:
-    image: redis:7-alpine
-    volumes:
-      - gitchain-redis:/data
+  # ===========================================
+  # GitChain Hub (Web UI)
+  # ===========================================
+  hub:
+    build:
+      context: .
+      dockerfile: apps/hub/Dockerfile
+    container_name: gitchain-hub
     restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Internal API URL (for SSR)
+      API_URL: http://api:3000
+      # Public URLs (for client-side)
+      NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:3100}
+      NEXT_PUBLIC_HUB_URL: ${PUBLIC_HUB_URL:-http://localhost:3001}
+      # Database (for direct queries in API routes)
+      DATABASE_URL: postgresql://gitchain:${DATABASE_PASSWORD}@postgres:5432/gitchain
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      api:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - gitchain-internal
+      - gitchain-external
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
 
+  # ===========================================
+  # Nginx Reverse Proxy (Optional)
+  # ===========================================
+  # Uncomment to enable TLS termination and routing
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: gitchain-nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./deployments/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./deployments/nginx/ssl:/etc/nginx/ssl:ro
+  #     - certbot-webroot:/var/www/certbot:ro
+  #   depends_on:
+  #     - api
+  #     - hub
+  #   networks:
+  #     - gitchain-external
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
+
+# ===========================================
+# Networks
+# ===========================================
+networks:
+  gitchain-internal:
+    driver: bridge
+    internal: true
+  gitchain-external:
+    driver: bridge
+
+# ===========================================
+# Volumes
+# ===========================================
 volumes:
+  gitchain-pgdata:
+    driver: local
   gitchain-redis:
+    driver: local
+  gitchain-repos:
+    driver: local
+  # certbot-webroot:
+  #   driver: local

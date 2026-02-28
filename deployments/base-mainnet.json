@@ -1,0 +1,8 @@
+{
+  "network": "base-mainnet",
+  "chainId": 8453,
+  "address": "0xAd31465A5618Ffa27eC1f3c0056C2f5CC621aEc7",
+  "deployer": "deployed-from-0711-studio",
+  "timestamp": "2026-02-27T00:00:00.000Z",
+  "note": "Contract originally deployed from 0711-Studio, now managed by GitChain"
+}

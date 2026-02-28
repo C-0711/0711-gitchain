@@ -1,17 +1,91 @@
+# GitChain Development Docker Compose
+# Usage: docker compose up -d
+#
+# This extends docker-compose.prod.yml with development overrides.
+# For production, use: docker compose -f docker-compose.prod.yml up -d
+
 services:
+  # PostgreSQL with exposed port for local access
+  postgres:
+    image: postgres:16-alpine
+    container_name: gitchain-postgres
+    restart: unless-stopped
+    ports:
+      - "5440:5432"
+    environment:
+      POSTGRES_USER: gitchain
+      POSTGRES_PASSWORD: gitchain2026
+      POSTGRES_DB: gitchain
+    volumes:
+      - gitchain-pgdata:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gitchain -d gitchain"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis with exposed port
+  redis:
+    image: redis:7-alpine
+    container_name: gitchain-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - gitchain-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API with development settings
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    container_name: gitchain-api
+    restart: unless-stopped
     ports:
       - "3100:3000"
     environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - GITCHAIN_DATA_DIR=/data/repos
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://gitchain:gitchain2026@postgres:5432/gitchain
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: gitchain-dev-secret-change-in-production
+      GITCHAIN_DATA_DIR: /data/repos
     volumes:
-      - gitchain-data:/data
+      - gitchain-repos:/data/repos
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Hub with development settings
+  hub:
+    build:
+      context: .
+      dockerfile: apps/hub/Dockerfile
+    container_name: gitchain-hub
     restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      API_URL: http://api:3000
+      NEXT_PUBLIC_API_URL: http://localhost:3100
+      DATABASE_URL: postgresql://gitchain:gitchain2026@postgres:5432/gitchain
+      JWT_SECRET: gitchain-dev-secret-change-in-production
+    depends_on:
+      - api
+      - postgres
 
 volumes:
-  gitchain-data:
+  gitchain-pgdata:
+  gitchain-redis:
+  gitchain-repos:
