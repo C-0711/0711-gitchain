@@ -53,7 +53,26 @@ export interface ApiKeyResult {
 // CONFIG
 // ===========================================
 
-const JWT_SECRET = process.env.JWT_SECRET || "gitchain-dev-secret-change-in-production";
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  const isProduction = process.env.NODE_ENV === "production";
+
+  if (!secret) {
+    if (isProduction) {
+      throw new Error(
+        "SECURITY ERROR: JWT_SECRET environment variable is required in production. " +
+          "Never use fallback values for secrets."
+      );
+    }
+    console.warn(
+      "WARNING: JWT_SECRET not set. Using development-only secret. " +
+        "This MUST be set in production."
+    );
+    return "gitchain-dev-only-not-for-production";
+  }
+  return secret;
+}
+
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 const BCRYPT_ROUNDS = 12;
 const API_KEY_PREFIX = "gc_live_";
@@ -77,7 +96,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 
 export function generateToken(userId: string): { token: string; expiresAt: Date } {
   const expiresIn = JWT_EXPIRES_IN;
-  const token = jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn });
+  const token = jwt.sign({ sub: userId }, getJwtSecret(), { expiresIn });
   
   // Calculate expiry date
   const decoded = jwt.decode(token) as { exp: number };
@@ -88,7 +107,7 @@ export function generateToken(userId: string): { token: string; expiresAt: Date 
 
 export function verifyToken(token: string): { userId: string } | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { sub: string };
+    const decoded = jwt.verify(token, getJwtSecret()) as { sub: string };
     return { userId: decoded.sub };
   } catch {
     return null;

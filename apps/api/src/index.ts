@@ -1,13 +1,15 @@
 /**
  * GitChain API Server — Production Ready
- * 
+ *
  * Real database, real auth, real storage.
+ * API Version: 1.0
  */
 
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { Pool } from "pg";
+import crypto from "crypto";
 
 // Services
 import { AuthService, verifyToken, isValidApiKeyFormat, hashApiKey } from "./services/auth";
@@ -18,13 +20,52 @@ import { OrganizationService } from "./services/organizations";
 import { createAuthRouter } from "./routes/auth";
 import { createContainersRouter } from "./routes/containers";
 import { createOrganizationsRouter } from "./routes/organizations";
+import { createChainRouter } from "./routes/chain";
+import { createAdminRouter } from "./routes/admin";
+
+// Audit logging
+import { initAudit, accessLogMiddleware } from "./lib/audit";
+
+// API Versioning
+import { versionMiddleware, getSupportedVersions, getCurrentVersion } from "./lib/versioning";
+
+// Response utilities
+import {
+  sendSuccess,
+  sendPaginated,
+  sendBadRequest,
+  sendNotFound,
+  sendServiceUnavailable,
+  asyncHandler,
+  errorHandler,
+} from "./lib/response";
+
+// Structured logging
+import { logger, requestLogger, logError, logAudit } from "./lib/logger";
+
+// API Version
+const API_VERSION = "1.0";
 
 // ===========================================
 // CONFIG
 // ===========================================
 
 const PORT = process.env.PORT || 3100;
-const DATABASE_URL = process.env.DATABASE_URL || "postgresql://gitchain:gitchain2026@localhost:5440/gitchain";
+const isProduction = process.env.NODE_ENV === "production";
+
+// Database URL - required in production
+function getDatabaseUrl(): string {
+  const url = process.env.DATABASE_URL;
+  if (!url && isProduction) {
+    throw new Error("DATABASE_URL environment variable is required in production");
+  }
+  return url || "postgresql://gitchain:gitchain2026@localhost:5440/gitchain";
+}
+
+const DATABASE_URL = getDatabaseUrl();
+
+// Track server start time for uptime reporting
+const serverStartTime = Date.now();
 
 // ===========================================
 // DATABASE
@@ -120,15 +161,21 @@ app.use(cors());
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: "10mb" }));
 
-// Request logging
+// Request ID and API version headers
 app.use((req, res, next) => {
-  const start = Date.now();
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    console.log(`${req.method} ${req.path} ${res.statusCode} ${duration}ms`);
-  });
+  // Generate unique request ID for tracing
+  const requestId = crypto.randomUUID();
+  (req as any).requestId = requestId;
+  res.setHeader("X-Request-Id", requestId);
+  res.setHeader("X-Api-Version", API_VERSION);
   next();
 });
+
+// Structured request logging
+app.use(requestLogger());
+
+// Access log to database (after auth middleware for user context)
+app.use(accessLogMiddleware());
 
 // ===========================================
 // AUTH MIDDLEWARE
@@ -173,161 +220,228 @@ app.use(authMiddleware);
 // ROUTES
 // ===========================================
 
-// Health
+// Root - API info
 app.get("/", (req, res) => {
-  res.json({
+  sendSuccess(res, {
     name: "GitChain API",
-    version: "1.0.0",
+    version: API_VERSION,
+    currentVersion: getCurrentVersion(),
+    supportedVersions: getSupportedVersions(),
     status: "running",
     docs: "https://gitchain.0711.io/docs",
+    endpoints: {
+      v1: "/v1",
+      health: "/health",
+      ready: "/ready",
+    },
   });
 });
 
-app.get("/health", async (req, res) => {
+// API versions endpoint
+app.get("/versions", (req, res) => {
+  sendSuccess(res, {
+    current: getCurrentVersion(),
+    supported: getSupportedVersions(),
+    latest: getCurrentVersion(),
+  });
+});
+
+// Health check - basic liveness probe
+app.get("/health", asyncHandler(async (req, res) => {
   try {
     await pool.query("SELECT 1");
-    res.json({ status: "healthy", database: "connected" });
+    sendSuccess(res, {
+      status: "ok",
+      uptime: Math.floor((Date.now() - serverStartTime) / 1000),
+      timestamp: new Date().toISOString(),
+    });
   } catch (err) {
-    res.status(503).json({ status: "unhealthy", database: "disconnected" });
+    sendServiceUnavailable(res, "Database connection failed");
   }
-});
+}));
 
-// Auth routes
+// Readiness check - full dependency check
+app.get("/ready", asyncHandler(async (req, res) => {
+  const checks: Record<string, "ok" | "error"> = {};
+  let allReady = true;
+
+  // Check database
+  try {
+    await pool.query("SELECT 1");
+    checks.database = "ok";
+  } catch (err) {
+    checks.database = "error";
+    allReady = false;
+  }
+
+  // Check pool status
+  const poolStats = {
+    total: pool.totalCount,
+    idle: pool.idleCount,
+    waiting: pool.waitingCount,
+  };
+
+  if (allReady) {
+    sendSuccess(res, {
+      status: "ready",
+      checks,
+      pool: poolStats,
+    });
+  } else {
+    sendServiceUnavailable(res, "Not all dependencies are ready");
+  }
+}));
+
+// ===========================================
+// VERSIONED API ROUTES (v1)
+// ===========================================
+
+// Apply version middleware to all v1 routes
+app.use("/v1", versionMiddleware("v1"));
+
+// Auth routes (v1)
+app.use("/v1/auth", createAuthRouter(authService));
+
+// Container routes (v1)
+app.use("/v1/containers", createContainersRouter(containerService));
+
+// Organization routes (v1)
+app.use("/v1/organizations", createOrganizationsRouter(organizationService));
+
+// Chain routes (v1)
+app.use("/v1/chain", createChainRouter());
+
+// Admin routes (v1)
+app.use("/v1/admin", createAdminRouter());
+
+// ===========================================
+// LEGACY ROUTES (without version prefix)
+// ===========================================
+// These are kept for backwards compatibility and will be deprecated
+
+// Auth routes (legacy)
 app.use("/auth", createAuthRouter(authService));
 
-// Container routes
+// Container routes (legacy - forwards to v1 behavior)
 app.use("/api/containers", createContainersRouter(containerService));
 
-// Organization routes
+// Organization routes (legacy)
 app.use("/api/organizations", createOrganizationsRouter(organizationService));
 
+// Chain routes (legacy)
+app.use("/api/chain", createChainRouter());
+
+// Admin routes (legacy)
+app.use("/api/admin", createAdminRouter());
+
 // Inject endpoint
-app.post("/api/inject", async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { containers: containerIds, verify = true, format = "markdown" } = req.body;
+app.post("/api/inject", asyncHandler(async (req: Request, res: Response) => {
+  const { containers: containerIds, verify = true, format = "markdown" } = req.body;
 
-    if (!containerIds || !Array.isArray(containerIds)) {
-      return res.status(400).json({ error: "containers array is required" });
-    }
-
-    const containers = [];
-    for (const id of containerIds) {
-      const container = await containerService.getByContainerId(id);
-      if (container) {
-        containers.push(container);
-        await containerService.incrementStat(container.id, "inject_count");
-      }
-    }
-
-    // Format output
-    let formatted = "";
-    if (format === "markdown") {
-      for (const c of containers) {
-        formatted += `# ${c.data.name || c.identifier}\n\n`;
-        formatted += `**Container ID:** \`${c.container_id}\`\n`;
-        formatted += `**Type:** ${c.type}\n`;
-        formatted += `**Namespace:** ${c.namespace}\n\n`;
-        
-        if (c.data.description) {
-          formatted += `## Description\n${c.data.description}\n\n`;
-        }
-        
-        if (c.data.specs || c.data.specifications) {
-          formatted += `## Specifications\n`;
-          const specs = c.data.specs || c.data.specifications;
-          for (const [key, value] of Object.entries(specs as Record<string, unknown>)) {
-            formatted += `- **${key}:** ${value}\n`;
-          }
-          formatted += "\n";
-        }
-
-        formatted += `---\n\n`;
-      }
-    } else if (format === "json") {
-      formatted = JSON.stringify(containers.map(c => c.data), null, 2);
-    }
-
-    res.json({
-      success: true,
-      containers: containers.map(c => ({
-        id: c.container_id,
-        type: c.type,
-        data: c.data,
-        verified: c.is_verified,
-      })),
-      formatted,
-      containerCount: containers.length,
-    });
-  } catch (err) {
-    next(err);
+  if (!containerIds || !Array.isArray(containerIds)) {
+    return sendBadRequest(res, "containers array is required");
   }
-});
+
+  const containers = [];
+  for (const id of containerIds) {
+    const container = await containerService.getByContainerId(id);
+    if (container) {
+      containers.push(container);
+      await containerService.incrementStat(container.id, "inject_count");
+    }
+  }
+
+  // Format output
+  let formatted = "";
+  if (format === "markdown") {
+    for (const c of containers) {
+      formatted += `# ${c.data.name || c.identifier}\n\n`;
+      formatted += `**Container ID:** \`${c.container_id}\`\n`;
+      formatted += `**Type:** ${c.type}\n`;
+      formatted += `**Namespace:** ${c.namespace}\n\n`;
+
+      if (c.data.description) {
+        formatted += `## Description\n${c.data.description}\n\n`;
+      }
+
+      if (c.data.specs || c.data.specifications) {
+        formatted += `## Specifications\n`;
+        const specs = c.data.specs || c.data.specifications;
+        for (const [key, value] of Object.entries(specs as Record<string, unknown>)) {
+          formatted += `- **${key}:** ${value}\n`;
+        }
+        formatted += "\n";
+      }
+
+      formatted += `---\n\n`;
+    }
+  } else if (format === "json") {
+    formatted = JSON.stringify(containers.map((c) => c.data), null, 2);
+  }
+
+  sendSuccess(res, {
+    containers: containers.map((c) => ({
+      id: c.container_id,
+      type: c.type,
+      data: c.data,
+      verified: c.is_verified,
+    })),
+    formatted,
+    containerCount: containers.length,
+  });
+}));
 
 // Search endpoint
-app.get("/api/search", async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { q, type, namespace, limit = "20" } = req.query;
+app.get("/api/search", asyncHandler(async (req: Request, res: Response) => {
+  const { q, type, namespace, limit = "20", page = "1" } = req.query;
 
-    if (!q) {
-      return res.status(400).json({ error: "Search query (q) is required" });
-    }
-
-    const result = await containerService.search(q as string, {
-      type: type as string | undefined,
-      namespace: namespace as string | undefined,
-      limit: parseInt(limit as string, 10),
-    });
-
-    res.json({
-      query: q,
-      results: result.containers,
-      total: result.total,
-    });
-  } catch (err) {
-    next(err);
+  if (!q) {
+    return sendBadRequest(res, "Search query (q) is required");
   }
-});
+
+  const limitNum = Math.min(parseInt(limit as string, 10) || 20, 100);
+  const pageNum = Math.max(parseInt(page as string, 10) || 1, 1);
+
+  const result = await containerService.search(q as string, {
+    type: type as string | undefined,
+    namespace: namespace as string | undefined,
+    limit: limitNum,
+  });
+
+  sendPaginated(res, result.containers, {
+    total: result.total,
+    page: pageNum,
+    limit: limitNum,
+  });
+}));
 
 // Namespaces
-app.get("/api/namespaces", async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const namespaces = await db.query(
-      "SELECT * FROM namespaces WHERE deleted_at IS NULL ORDER BY name"
-    );
-    res.json({ namespaces });
-  } catch (err) {
-    next(err);
+app.get("/api/namespaces", asyncHandler(async (req: Request, res: Response) => {
+  const namespaces = await db.query(
+    "SELECT * FROM namespaces WHERE deleted_at IS NULL ORDER BY name"
+  );
+  sendSuccess(res, namespaces);
+}));
+
+app.get("/api/namespaces/:name", asyncHandler(async (req: Request, res: Response) => {
+  const namespace = await db.queryOne(
+    "SELECT * FROM namespaces WHERE name = $1 AND deleted_at IS NULL",
+    [req.params.name]
+  );
+
+  if (!namespace) {
+    return sendNotFound(res, "Namespace");
   }
-});
 
-app.get("/api/namespaces/:name", async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const namespace = await db.queryOne(
-      "SELECT * FROM namespaces WHERE name = $1 AND deleted_at IS NULL",
-      [req.params.name]
-    );
-
-    if (!namespace) {
-      return res.status(404).json({ error: "Namespace not found" });
-    }
-
-    res.json({ namespace });
-  } catch (err) {
-    next(err);
-  }
-});
+  sendSuccess(res, namespace);
+}));
 
 // ===========================================
 // ERROR HANDLING
 // ===========================================
 
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error("Error:", err);
-  res.status(500).json({
-    error: "Internal server error",
-    message: process.env.NODE_ENV === "development" ? err.message : undefined,
-  });
-});
+// Use standardized error handler
+app.use(errorHandler);
 
 // ===========================================
 // START
@@ -337,14 +451,22 @@ async function start() {
   try {
     // Test database connection
     await pool.query("SELECT 1");
-    console.log("✅ Database connected");
+    logger.info("Database connected");
+
+    // Initialize audit logging
+    initAudit(pool);
+    logger.info("Audit logging initialized");
 
     app.listen(PORT, () => {
-      console.log(`🚀 GitChain API running on port ${PORT}`);
-      console.log(`📚 Docs: https://gitchain.0711.io/docs`);
+      logger.info("GitChain API started", {
+        port: PORT,
+        version: API_VERSION,
+        environment: process.env.NODE_ENV || "development",
+        docs: "https://gitchain.0711.io/docs",
+      });
     });
   } catch (err) {
-    console.error("❌ Failed to start:", err);
+    logError(err as Error, { context: "startup" });
     process.exit(1);
   }
 }
