@@ -6,7 +6,7 @@
  */
 
 import { Router, Request, Response } from "express";
-import { ContainerService, CollaboratorRole, ContainerVisibility } from "../services/containers";
+import { ContainerService, CollaboratorRole, ContainerVisibility } from "../services/containers.js";
 import {
   sendSuccess,
   sendCreated,
@@ -17,7 +17,7 @@ import {
   sendForbidden,
   sendNotFound,
   asyncHandler,
-} from "../lib/response";
+} from "../lib/response.js";
 
 export function createContainersRouter(containerService: ContainerService): Router {
   const router = Router();

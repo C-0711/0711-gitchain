@@ -16,6 +16,6 @@
     "resolveJsonModule": true,
     "isolatedModules": true
   },
-  "include": ["src/index.ts", "src/schema.ts", "src/id.ts", "src/types.ts"],
+  "include": ["src/index.ts", "src/schema.ts", "src/id.ts", "src/types.ts", "src/types/atom.ts"],
   "exclude": ["node_modules", "dist", "src/connectors", "src/config"]
 }

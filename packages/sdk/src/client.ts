@@ -2,7 +2,7 @@
  * GitChain API Client
  */
 
-import type { GitChainConfig, Container, InjectOptions, InjectResult } from "./types";
+import type { GitChainConfig, Container, InjectOptions, InjectResult } from "./types.js";
 
 const DEFAULT_CONFIG: Partial<GitChainConfig> = {
   apiUrl: "https://api.gitchain.0711.io",

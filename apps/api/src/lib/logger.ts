@@ -111,7 +111,7 @@ class Logger {
       service: config.serviceName,
       version: config.version,
       msg: message,
-      ...maskedData,
+      ...(maskedData as Record<string, unknown> | undefined),
     };
 
     if (config.prettyPrint) {
@@ -246,6 +246,7 @@ export interface RequestLogContext {
   ip: string;
   userAgent?: string;
   userId?: string;
+  [key: string]: unknown;
 }
 
 /**

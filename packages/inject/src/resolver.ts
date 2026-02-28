@@ -2,9 +2,9 @@
  * Container resolution via GitChain API
  */
 
-import type { Container, ContainerType } from "@c-0711/core";
-import type { ResolverOptions } from "./types";
-import { cacheGet, cacheSet } from "./cache";
+import type { Container, ContainerType } from "@0711/core";
+import type { ResolverOptions } from "./types.js";
+import { cacheGet, cacheSet } from "./cache.js";
 
 const API_URL = process.env.GITCHAIN_API_URL || "https://api-gitchain.0711.io";
 

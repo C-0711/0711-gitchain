@@ -15,13 +15,13 @@ export {
   NETWORKS,
   CONTRACT_ADDRESS,
   CONTRACT_ABI,
-} from "./blockchain";
+} from "./blockchain.js";
 export type {
   BatchInfo,
   CertifyBatchResult,
   BlockchainStatus,
   NetworkConfig,
-} from "./blockchain";
+} from "./blockchain.js";
 
 // Merkle Tree
 export {
@@ -36,8 +36,8 @@ export {
   getProofByHash,
   startAutoBatching,
   stopAutoBatching,
-} from "./merkle";
-export type { BatchResult, MerkleTreeResult, MerkleProof } from "./merkle";
+} from "./merkle.js";
+export type { BatchResult, MerkleTreeResult, MerkleProof } from "./merkle.js";
 
 // Certification Service
 export {
@@ -54,11 +54,11 @@ export {
   runECGTCheck,
   runBrandCheck,
   runPIICheck,
-} from "./service";
+} from "./service.js";
 // Note: hashContent is exported from merkle.ts (keccak256 for on-chain)
 // service.ts also has a hashContent (sha256 for content fingerprinting)
 // They serve different purposes.
-export { hashContent as hashContentSha256 } from "./service";
+export { hashContent as hashContentSha256 } from "./service.js";
 
 // Database
 export {
@@ -74,8 +74,8 @@ export {
   logAudit,
   getAuditLog,
   getStats,
-} from "./db";
-export type { ManifestRecord, BatchRecord, ProofRecord, AuditEntry } from "./db";
+} from "./db.js";
+export type { ManifestRecord, BatchRecord, ProofRecord, AuditEntry } from "./db.js";
 
 // Types
 export type {
@@ -87,4 +87,4 @@ export type {
   VerifyRequest,
   VerifyResponse,
   MerkleProof as TypesMerkleProof,
-} from "./types";
+} from "./types.js";

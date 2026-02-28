@@ -7,7 +7,7 @@
 
 import { Request, Response, NextFunction } from "express";
 import { Pool } from "pg";
-import { logger } from "./logger";
+import { logger } from "./logger.js";
 
 // ============================================
 // TYPES

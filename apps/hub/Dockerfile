@@ -2,43 +2,22 @@
 # Next.js standalone build for minimal image size
 
 # ===========================================
-# Stage 1: Dependencies
+# Stage 1: Build
 # ===========================================
-FROM node:20-alpine AS deps
+FROM node:20-alpine AS builder
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@10.29.1 --activate
 
 WORKDIR /app
 
-# Copy workspace configuration
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-
-# Copy package.json files for dependency resolution
-COPY apps/hub/package.json ./apps/hub/
-COPY packages/core/package.json ./packages/core/
-
-# Install dependencies
-RUN pnpm install --frozen-lockfile
-
-# ===========================================
-# Stage 2: Builder
-# ===========================================
-FROM node:20-alpine AS builder
-
-RUN corepack enable && corepack prepare pnpm@10.29.1 --activate
-
-WORKDIR /app
-
-# Copy dependencies
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/hub/node_modules ./apps/hub/node_modules
-COPY --from=deps /app/packages/core/node_modules ./packages/core/node_modules
-
-# Copy source files
-COPY package.json pnpm-workspace.yaml tsconfig.json ./
+# Copy everything needed for build
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.json ./
 COPY apps/hub ./apps/hub
 COPY packages/core ./packages/core
+
+# Install dependencies (shamefully-hoist for flat node_modules)
+RUN pnpm install --frozen-lockfile --shamefully-hoist
 
 # Build core package first
 RUN pnpm --filter @0711/core build
@@ -50,7 +29,7 @@ ENV NODE_ENV=production
 RUN pnpm --filter @0711/hub build
 
 # ===========================================
-# Stage 3: Production Runner
+# Stage 2: Production Runner
 # ===========================================
 FROM node:20-alpine AS runner
 
@@ -69,7 +48,7 @@ ENV HOSTNAME="0.0.0.0"
 # Copy public assets
 COPY --from=builder /app/apps/hub/public ./public
 
-# Copy standalone build
+# Copy standalone build (monorepo-aware path)
 COPY --from=builder --chown=nextjs:nodejs /app/apps/hub/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/hub/.next/static ./apps/hub/.next/static
 
@@ -83,5 +62,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD node -e "fetch('http://localhost:3000/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
 
-# Start the server
+# Start the server (monorepo standalone path)
 CMD ["node", "apps/hub/server.js"]

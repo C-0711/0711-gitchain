@@ -4,7 +4,7 @@
  * Provides Git-based version control for containers using isomorphic-git.
  */
 
-export { GitRepository } from "./repository";
-export { commitContainer, getHistory, getDiff } from "./operations";
-export { createNamespace, listNamespaces } from "./namespace";
-export type { GitConfig, CommitInfo, DiffResult } from "./types";
+export { GitRepository } from "./repository.js";
+export { commitContainer, getHistory, getDiff } from "./operations.js";
+export { createNamespace, listNamespaces } from "./namespace.js";
+export type { GitConfig, CommitInfo, DiffResult } from "./types.js";

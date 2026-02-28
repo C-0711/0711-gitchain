@@ -12,22 +12,22 @@ import { Pool } from "pg";
 import crypto from "crypto";
 
 // Services
-import { AuthService, verifyToken, isValidApiKeyFormat, hashApiKey } from "./services/auth";
-import { ContainerService } from "./services/containers";
-import { OrganizationService } from "./services/organizations";
+import { AuthService, verifyToken, isValidApiKeyFormat, hashApiKey } from "./services/auth.js";
+import { ContainerService } from "./services/containers.js";
+import { OrganizationService } from "./services/organizations.js";
 
 // Routes
-import { createAuthRouter } from "./routes/auth";
-import { createContainersRouter } from "./routes/containers";
-import { createOrganizationsRouter } from "./routes/organizations";
-import { createChainRouter } from "./routes/chain";
-import { createAdminRouter } from "./routes/admin";
+import { createAuthRouter } from "./routes/auth.js";
+import { createContainersRouter } from "./routes/containers.js";
+import { createOrganizationsRouter } from "./routes/organizations.js";
+import { createChainRouter } from "./routes/chain.js";
+import { createAdminRouter } from "./routes/admin.js";
 
 // Audit logging
-import { initAudit, accessLogMiddleware } from "./lib/audit";
+import { initAudit, accessLogMiddleware } from "./lib/audit.js";
 
 // API Versioning
-import { versionMiddleware, getSupportedVersions, getCurrentVersion } from "./lib/versioning";
+import { versionMiddleware, getSupportedVersions, getCurrentVersion } from "./lib/versioning.js";
 
 // Response utilities
 import {
@@ -38,10 +38,10 @@ import {
   sendServiceUnavailable,
   asyncHandler,
   errorHandler,
-} from "./lib/response";
+} from "./lib/response.js";
 
 // Structured logging
-import { logger, requestLogger, logError, logAudit } from "./lib/logger";
+import { logger, requestLogger, logError, logAudit } from "./lib/logger.js";
 
 // API Version
 const API_VERSION = "1.0";

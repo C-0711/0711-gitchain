@@ -5,7 +5,7 @@
 import git from "isomorphic-git";
 import fs from "fs";
 import path from "path";
-import type { GitConfig, CommitInfo } from "./types";
+import type { GitConfig, CommitInfo } from "./types.js";
 
 export class GitRepository {
   private config: GitConfig;

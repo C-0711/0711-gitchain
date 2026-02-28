@@ -2,7 +2,7 @@
  * Inject layer types
  */
 
-import type { Container as CoreContainer, ContainerType } from "@c-0711/core";
+import type { Container as CoreContainer, ContainerType } from "@0711/core";
 
 // Re-export core container type with chain info
 export interface Container extends CoreContainer {

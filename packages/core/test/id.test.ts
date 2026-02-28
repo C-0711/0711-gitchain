@@ -8,7 +8,7 @@ import {
   buildContainerId,
   isValidContainerId,
   toLatestId,
-} from "../src/id";
+} from "../src/id.js";
 
 describe("parseContainerId", () => {
   it("parses valid product container ID", () => {

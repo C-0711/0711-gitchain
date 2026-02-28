@@ -2,9 +2,9 @@
  * C2PA convenience functions
  */
 
-import { getC2PAService } from "./service";
+import { getC2PAService } from "./service.js";
 import type { Container } from "@0711/core";
-import type { C2PAConfig, SignatureResult, VerificationResult, C2PAManifest } from "./types";
+import type { C2PAConfig, SignatureResult, VerificationResult, C2PAManifest } from "./types.js";
 
 /**
  * Sign container content

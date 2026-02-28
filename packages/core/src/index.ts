@@ -17,7 +17,7 @@ export {
   validateContainer,
   safeValidateContainer,
   validateContainerId,
-} from "./schema";
+} from "./schema.js";
 
 export type {
   ContainerType,
@@ -27,7 +27,7 @@ export type {
   ChainProof,
   GitInfo,
   Container,
-} from "./schema";
+} from "./schema.js";
 
 // ID utilities
 export {
@@ -36,9 +36,34 @@ export {
   toLatestId,
   isLatestVersion,
   isValidContainerId,
-} from "./id";
+} from "./id.js";
 
-export type { ParsedContainerId } from "./id";
+export type { ParsedContainerId } from "./id.js";
+
+// Atom types (DataAtom provenance system)
+export {
+  createAtom,
+  compareTrust,
+  meetsTrustMin,
+  SOURCE_TO_TRUST,
+  TRUST_PRIORITY,
+} from "./types/atom.js";
+
+export type {
+  TrustLevel,
+  SourceType,
+  DataAtom,
+  DataAtomSource,
+  DataAtomCitation,
+  DataAtomVerification,
+  ContainerLayer,
+  Contributor,
+  ContributorRole,
+  ProductContainerManifest,
+  InjectOptions,
+  InjectResponse,
+  EtimFeatureAtom,
+} from "./types/atom.js";
 
 // Constants
 export const CONTAINER_TYPES = [

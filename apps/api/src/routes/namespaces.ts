@@ -3,9 +3,10 @@
  */
 
 import { Router } from "express";
+import type { Router as IRouter } from "express";
 import { listNamespaces, createNamespace } from "@0711/git";
 
-const router = Router();
+const router: IRouter = Router();
 
 const gitConfig = {
   baseDir: process.env.GITCHAIN_DATA_DIR || "/data/gitchain/repos",
@@ -22,7 +23,7 @@ router.get("/", async (req, res) => {
     const namespaces = await listNamespaces(type as string | undefined, gitConfig);
 
     res.json({
-      namespaces: namespaces.map((ns) => ({
+      namespaces: namespaces.map((ns: any) => ({
         name: ns.name,
         type: ns.type,
         containerCount: ns.containerCount,

@@ -2,7 +2,7 @@
  * C2PA Service
  */
 
-import type { C2PAConfig, C2PAManifest, SignatureResult, VerificationResult } from "./types";
+import type { C2PAConfig, C2PAManifest, SignatureResult, VerificationResult } from "./types.js";
 import type { Container } from "@0711/core";
 import crypto from "crypto";
 

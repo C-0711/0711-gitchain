@@ -5,7 +5,7 @@
  */
 
 import { Router, Request, Response, NextFunction } from "express";
-import { OrganizationService, OrgRole } from "../services/organizations";
+import { OrganizationService, OrgRole } from "../services/organizations.js";
 
 export function createOrganizationsRouter(orgService: OrganizationService): Router {
   const router = Router();

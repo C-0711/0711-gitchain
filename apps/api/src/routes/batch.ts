@@ -5,11 +5,12 @@
  */
 
 import { Router } from "express";
-import { getBlockchainService, createBatch, verifyProof } from "@0711/chain";
+import type { Router as IRouter } from "express";
+import { getBlockchainService, createBatch, verifyProof, hashContent } from "@0711/chain";
 import { GitRepository } from "@0711/git";
-import { requireAuth, AuthenticatedRequest } from "../middleware/auth";
+import { requireAuth, AuthenticatedRequest } from "../middleware/auth.js";
 
-const router = Router();
+const router: IRouter = Router();
 
 const gitConfig = {
   baseDir: process.env.GITCHAIN_DATA_DIR || "/data/gitchain/repos",
@@ -92,11 +93,12 @@ router.post("/", requireAuth, async (req: AuthenticatedRequest, res) => {
     // 2. Create Merkle tree batch
     const batchContainers = results.map((r, i) => ({
       id: r.id,
+      contentHash: hashContent(containers[i].data),
       data: containers[i].data,
     }));
 
     const metadataUri = `ipfs://pending`; // TODO: Upload to IPFS
-    const batch = createBatch(batchContainers, metadataUri);
+    const batch = createBatch(batchContainers);
 
     // 3. Register on blockchain (if private key available)
     let chainResult: { batchId: number; txHash: string } | null = null;
@@ -104,7 +106,10 @@ router.post("/", requireAuth, async (req: AuthenticatedRequest, res) => {
     const privateKey = process.env.GITCHAIN_WALLET_KEY;
     if (privateKey) {
       const blockchain = getBlockchainService("base-mainnet", privateKey);
-      chainResult = await blockchain.registerBatch(batch.merkleRoot, metadataUri);
+      const certResult = await blockchain.certifyBatch(batch.merkleRoot, metadataUri, results.length);
+      if (certResult.success && certResult.onChainBatchId && certResult.txHash) {
+        chainResult = { batchId: certResult.onChainBatchId, txHash: certResult.txHash };
+      }
     }
 
     res.status(201).json({
@@ -139,7 +144,7 @@ router.get("/:id", async (req, res) => {
     }
 
     const blockchain = getBlockchainService();
-    const batch = await blockchain.getBatch(batchId);
+    const batch = await blockchain.getCertification(batchId);
 
     if (!batch) {
       return res.status(404).json({ error: "Batch not found" });
@@ -150,7 +155,7 @@ router.get("/:id", async (req, res) => {
       merkleRoot: batch.merkleRoot,
       metadataUri: batch.metadataUri,
       timestamp: batch.timestamp,
-      registrar: batch.registrar,
+      registrar: batch.issuer,
       explorerUrl: blockchain.getExplorerUrl(batch.merkleRoot),
     });
   } catch (err: any) {
@@ -177,14 +182,14 @@ router.post("/:id/verify", async (req, res) => {
     }
 
     const blockchain = getBlockchainService();
-    const batch = await blockchain.getBatch(batchId);
+    const batch = await blockchain.getCertification(batchId);
 
     if (!batch) {
       return res.status(404).json({ error: "Batch not found" });
     }
 
     // Verify using Merkle proof
-    const isValid = verifyProof(batch.merkleRoot, contentHash, proof, 0);
+    const isValid = verifyProof(batch.merkleRoot, contentHash, proof);
 
     res.json({
       verified: isValid,

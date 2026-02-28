@@ -6,7 +6,7 @@
  */
 
 import { ethers } from "ethers";
-import type { CertificationBatch, MerkleProof as TypesMerkleProof } from "./types";
+import type { CertificationBatch, MerkleProof as TypesMerkleProof } from "./types.js";
 
 // ============================================
 // MERKLE TREE TYPES

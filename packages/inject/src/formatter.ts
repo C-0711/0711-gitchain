@@ -2,7 +2,7 @@
  * Format containers for LLM consumption
  */
 
-import type { Container } from "@c-0711/core";
+import type { Container } from "@0711/core";
 
 interface FormatOptions {
   format: "markdown" | "json" | "yaml";

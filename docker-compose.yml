@@ -31,7 +31,7 @@ services:
     container_name: gitchain-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "6399:6379"
     command: redis-server --appendonly yes
     volumes:
       - gitchain-redis:/data
@@ -78,7 +78,7 @@ services:
       NODE_ENV: development
       PORT: 3000
       API_URL: http://api:3000
-      NEXT_PUBLIC_API_URL: http://localhost:3100
+      NEXT_PUBLIC_API_URL: http://api-gitchain.0711.io
       DATABASE_URL: postgresql://gitchain:gitchain2026@postgres:5432/gitchain
       JWT_SECRET: gitchain-dev-secret-change-in-production
     depends_on:

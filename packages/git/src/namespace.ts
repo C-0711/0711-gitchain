@@ -4,8 +4,8 @@
 
 import fs from "fs";
 import path from "path";
-import { GitRepository } from "./repository";
-import type { GitConfig, NamespaceInfo } from "./types";
+import { GitRepository } from "./repository.js";
+import type { GitConfig, NamespaceInfo } from "./types.js";
 
 const defaultConfig: GitConfig = {
   baseDir: process.env.GITCHAIN_DATA_DIR || "/data/gitchain/repos",

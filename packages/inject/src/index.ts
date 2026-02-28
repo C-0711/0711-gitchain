@@ -18,11 +18,11 @@
  * ```
  */
 
-export { inject, injectBatch, createInject } from "./injector";
-export { resolveContainers, warmCache } from "./resolver";
-export { formatContext } from "./formatter";
-export { verifyContainers, verifyHash } from "./verifier";
-export { cacheGet, cacheSet, cacheDelete, invalidateContainer, closeCache } from "./cache";
+export { inject, injectBatch, createInject } from "./injector.js";
+export { resolveContainers, warmCache } from "./resolver.js";
+export { formatContext } from "./formatter.js";
+export { verifyContainers, verifyHash } from "./verifier.js";
+export { cacheGet, cacheSet, cacheDelete, invalidateContainer, closeCache } from "./cache.js";
 
 export type {
   Container,
@@ -32,4 +32,4 @@ export type {
   ChainProof,
   VerificationResult,
   ResolverOptions,
-} from "./types";
+} from "./types.js";

@@ -4,6 +4,6 @@
  * Upload and retrieve container metadata from IPFS.
  */
 
-export { IPFSService, getIPFSService } from "./service";
-export { uploadJSON, downloadJSON, uploadFile, getGatewayUrl } from "./operations";
-export type { IPFSConfig, UploadResult } from "./types";
+export { IPFSService, getIPFSService } from "./service.js";
+export { uploadJSON, downloadJSON, uploadFile, getGatewayUrl } from "./operations.js";
+export type { IPFSConfig, UploadResult } from "./types.js";

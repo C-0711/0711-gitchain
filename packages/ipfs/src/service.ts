@@ -6,7 +6,7 @@
  * Falls back to raw IPFS API if Pinata is not configured.
  */
 
-import type { IPFSConfig, UploadResult } from "./types";
+import type { IPFSConfig, UploadResult } from "./types.js";
 
 // ============================================
 // CONFIGURATION
@@ -147,7 +147,7 @@ export class IPFSService {
       throw new Error(`IPFS upload failed: ${response.statusText}`);
     }
 
-    const result = await response.json();
+    const result = await response.json() as any;
     const cid = result.Hash;
 
     return {
@@ -197,7 +197,7 @@ export class IPFSService {
       throw new Error(`IPFS upload failed: ${response.statusText}`);
     }
 
-    const result = await response.json();
+    const result = await response.json() as any;
     const cid = result.Hash;
 
     return {
@@ -309,7 +309,7 @@ export class IPFSService {
       throw new Error(`IPFS download failed: ${response.statusText}`);
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   }
 
   /**

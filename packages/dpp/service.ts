@@ -7,7 +7,7 @@ import type {
   DPPCreateRequest, 
   DPPCreateResponse,
   DPPVerifyResponse 
-} from './types';
+} from './types.js';
 
 const DPP_VERSION = '1.0.0';
 const BASE_URL = process.env.NEXTAUTH_URL || 'https://studio.0711.io';

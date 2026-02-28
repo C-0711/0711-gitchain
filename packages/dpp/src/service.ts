@@ -2,7 +2,7 @@
  * Digital Product Passport Service
  */
 
-import type { DPPConfig, ProductPassport, PassportVerification } from "./types";
+import type { DPPConfig, ProductPassport, PassportVerification } from "./types.js";
 import type { Container } from "@0711/core";
 
 const DEFAULT_CONFIG: DPPConfig = {

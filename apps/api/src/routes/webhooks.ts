@@ -3,10 +3,11 @@
  */
 
 import { Router } from "express";
+import type { Router as IRouter } from "express";
 import crypto from "crypto";
-import { requireAuth, AuthenticatedRequest } from "../middleware/auth";
+import { requireAuth, AuthenticatedRequest } from "../middleware/auth.js";
 
-const router = Router();
+const router: IRouter = Router();
 
 interface Webhook {
   id: string;

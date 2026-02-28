@@ -40,11 +40,30 @@ function getRequiredDbConfig() {
   };
 }
 
-export const pool = new Pool({
-  ...getRequiredDbConfig(),
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+// Lazy pool initialization — avoids crash during Next.js build (no DB available)
+let _pool: Pool | null = null;
+
+function getPool(): Pool {
+  if (!_pool) {
+    _pool = new Pool({
+      ...getRequiredDbConfig(),
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    });
+  }
+  return _pool;
+}
+
+export const pool = new Proxy({} as Pool, {
+  get(_target, prop: string | symbol) {
+    const realPool = getPool();
+    const value = (realPool as any)[prop];
+    if (typeof value === "function") {
+      return value.bind(realPool);
+    }
+    return value;
+  },
 });
 
 // Helper to get user ID from JWT token - uses proper JWT verification

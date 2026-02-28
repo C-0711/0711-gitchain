@@ -11,7 +11,7 @@
  */
 
 import { Router, Request, Response, NextFunction } from "express";
-import { logger } from "./logger";
+import { logger } from "./logger.js";
 
 // ============================================
 // CONFIGURATION

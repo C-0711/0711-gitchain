@@ -6,22 +6,22 @@
  */
 
 import { createHash } from "crypto";
-import { saveManifest, getManifest, logAudit, updateManifestBatch } from "./db";
+import { saveManifest, getManifest, logAudit, updateManifestBatch } from "./db.js";
 import {
   createBatch as createMerkleBatch,
   verifyProof,
   getProofByHash,
   updateBatchStatus,
   type BatchResult,
-} from "./merkle";
-import { getBlockchainService } from "./blockchain";
+} from "./merkle.js";
+import { getBlockchainService } from "./blockchain.js";
 import type {
   ContentManifest,
   ComplianceResult,
   CertifyRequest,
   CertifyResponse,
   MerkleProof,
-} from "./types";
+} from "./types.js";
 
 // ============================================
 // CERTIFICATION QUEUE (in-memory)

@@ -5,11 +5,11 @@
  * Every fact is traceable, every output is verified.
  */
 
-import type { Container } from "@c-0711/core";
-import type { InjectOptions, InjectedContext, Citation } from "./types";
-import { resolveContainers } from "./resolver";
-import { formatContext } from "./formatter";
-import { verifyContainers } from "./verifier";
+import type { Container } from "@0711/core";
+import type { InjectOptions, InjectedContext, Citation } from "./types.js";
+import { resolveContainers } from "./resolver.js";
+import { formatContext } from "./formatter.js";
+import { verifyContainers } from "./verifier.js";
 
 /**
  * Inject verified context from containers into AI agent

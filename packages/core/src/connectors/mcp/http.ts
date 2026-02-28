@@ -14,7 +14,7 @@ import type {
   MCPResourceContent,
   SyncResult,
   HealthCheckResult,
-} from "../types";
+} from "../types.js";
 
 interface HttpMCPConfig extends MCPConfig {
   type: "http";

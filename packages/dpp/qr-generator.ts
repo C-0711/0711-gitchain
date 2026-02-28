@@ -4,7 +4,7 @@
  */
 
 import QRCode from 'qrcode'
-import { DigitalProductPassport, generateDPPQRData } from './container-to-dpp'
+import { DigitalProductPassport, generateDPPQRData } from './container-to-dpp.js'
 
 export interface QRCodeOptions {
   width?: number

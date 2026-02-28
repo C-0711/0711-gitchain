@@ -2,9 +2,9 @@
  * DPP convenience functions
  */
 
-import { getDPPService } from "./service";
+import { getDPPService } from "./service.js";
 import type { Container } from "@0711/core";
-import type { DPPConfig, ProductPassport, PassportVerification } from "./types";
+import type { DPPConfig, ProductPassport, PassportVerification } from "./types.js";
 
 /**
  * Create a Digital Product Passport

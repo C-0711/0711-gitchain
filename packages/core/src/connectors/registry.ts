@@ -16,11 +16,11 @@ import type {
   DatabaseConnector,
   DatabaseConfig,
   ConnectorFactory,
-} from "./types";
+} from "./types.js";
 
 // Built-in connectors
-import { create0711StorageConnector } from "./storage/0711-storage";
-import { createHttpMCPConnector } from "./mcp/http";
+import { create0711StorageConnector } from "./storage/0711-storage.js";
+import { createHttpMCPConnector } from "./mcp/http.js";
 
 class ConnectorRegistryImpl implements ConnectorRegistry {
   private storageFactories = new Map<

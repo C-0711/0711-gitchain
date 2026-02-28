@@ -2,8 +2,8 @@
  * IPFS convenience functions
  */
 
-import { getIPFSService } from "./service";
-import type { IPFSConfig, UploadResult } from "./types";
+import { getIPFSService } from "./service.js";
+import type { IPFSConfig, UploadResult } from "./types.js";
 
 /**
  * Upload JSON to IPFS

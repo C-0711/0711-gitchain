@@ -3,8 +3,8 @@
  */
 
 import { describe, it, expect } from "@jest/globals";
-import { formatContext } from "../src/formatter";
-import type { Container } from "../src/types";
+import { formatContext } from "../src/formatter.js";
+import type { Container } from "../src/types.js";
 
 const mockContainer: Container = {
   id: "0711:product:bosch:7736606982:v3",

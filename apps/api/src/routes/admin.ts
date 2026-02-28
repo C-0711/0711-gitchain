@@ -6,14 +6,14 @@
  */
 
 import { Router, Request, Response } from "express";
-import { queryAuditLog, queryAccessLog } from "../lib/audit";
+import { queryAuditLog, queryAccessLog } from "../lib/audit.js";
 import {
   sendSuccess,
   sendPaginated,
   sendUnauthorized,
   sendForbidden,
   asyncHandler,
-} from "../lib/response";
+} from "../lib/response.js";
 
 export function createAdminRouter(): Router {
   const router = Router();

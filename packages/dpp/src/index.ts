@@ -5,6 +5,6 @@
  * Implements EU DPP specification with blockchain anchoring.
  */
 
-export { DPPService, getDPPService } from "./service";
-export { createPassport, verifyPassport, getPassportUrl } from "./operations";
-export type { DPPConfig, ProductPassport, PassportVerification } from "./types";
+export { DPPService, getDPPService } from "./service.js";
+export { createPassport, verifyPassport, getPassportUrl } from "./operations.js";
+export type { DPPConfig, ProductPassport, PassportVerification } from "./types.js";

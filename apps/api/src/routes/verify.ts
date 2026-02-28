@@ -3,11 +3,12 @@
  */
 
 import { Router } from "express";
+import type { Router as IRouter } from "express";
 import { getBlockchainService } from "@0711/chain";
 import { inject } from "@0711/inject";
 import { validateContainerId, parseContainerId } from "@0711/core";
 
-const router = Router();
+const router: IRouter = Router();
 
 /**
  * GET /verify/:hashOrId - Verify container or hash
@@ -32,7 +33,7 @@ router.get("/:hashOrId", async (req, res) => {
       }
 
       const container = context.containers[0];
-      const proof = context.proofs.find((p) => p.containerId === hashOrId);
+      const proof = context.proofs.find((p: any) => p.containerId === hashOrId);
 
       return res.json({
         verified: context.verified,
@@ -84,9 +85,9 @@ router.post("/batch", async (req, res) => {
 
     res.json({
       verified: context.verified,
-      containers: context.containers.map((c) => ({
+      containers: context.containers.map((c: any) => ({
         id: c.id,
-        verified: context.proofs.find((p) => p.containerId === c.id)?.verified || false,
+        verified: context.proofs.find((p: any) => p.containerId === c.id)?.verified || false,
       })),
       proofs: context.proofs,
     });
@@ -107,7 +108,7 @@ router.get("/batch/:batchId", async (req, res) => {
     }
 
     const blockchain = getBlockchainService();
-    const batch = await blockchain.getBatch(batchId);
+    const batch = await blockchain.getCertification(batchId);
 
     if (!batch) {
       return res.status(404).json({ error: "Batch not found" });
@@ -118,7 +119,7 @@ router.get("/batch/:batchId", async (req, res) => {
       merkleRoot: batch.merkleRoot,
       metadataUri: batch.metadataUri,
       timestamp: batch.timestamp,
-      registrar: batch.registrar,
+      registrar: batch.issuer,
       explorerUrl: blockchain.getExplorerUrl(batch.merkleRoot),
     });
   } catch (err: any) {

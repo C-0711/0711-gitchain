@@ -9,7 +9,7 @@
  *   0711:project:client:migration:v5
  */
 
-import type { ContainerType } from "./types";
+import type { ContainerType } from "./types.js";
 
 export interface ParsedContainerId {
   prefix: "0711";

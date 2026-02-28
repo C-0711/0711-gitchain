@@ -5,7 +5,7 @@
  */
 
 import { Router, Request, Response, NextFunction } from "express";
-import { AuthService } from "../services/auth";
+import { AuthService } from "../services/auth.js";
 
 export function createAuthRouter(authService: AuthService): Router {
   const router = Router();

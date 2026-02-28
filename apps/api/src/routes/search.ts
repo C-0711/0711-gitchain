@@ -3,12 +3,13 @@
  */
 
 import { Router } from "express";
+import type { Router as IRouter } from "express";
 import { GitRepository } from "@0711/git";
 import { parseContainerId } from "@0711/core";
 import fs from "fs";
 import path from "path";
 
-const router = Router();
+const router: IRouter = Router();
 
 const gitConfig = {
   baseDir: process.env.GITCHAIN_DATA_DIR || "/data/gitchain/repos",

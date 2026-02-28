@@ -1,7 +1,7 @@
 // DPP-06: Compliance Validation Rules Engine
 // Path: 0711-studio/src/lib/dpp/validator.ts
 
-import { EU_DPP_REQUIREMENTS, getRequirementsForSector, type EUDPPRequirement } from './eu-regulation';
+import { EU_DPP_REQUIREMENTS, getRequirementsForSector, type EUDPPRequirement } from './eu-regulation.js';
 
 export interface ValidationResult {
   valid: boolean;

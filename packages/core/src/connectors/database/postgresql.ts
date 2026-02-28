@@ -11,7 +11,7 @@ import type {
   ExecuteResult,
   Transaction,
   HealthCheckResult,
-} from "../types";
+} from "../types.js";
 
 interface PostgreSQLConfig extends DatabaseConfig {
   type: "postgresql";

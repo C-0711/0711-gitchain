@@ -5,8 +5,8 @@
  * for real on-chain Merkle proof + blockchain verification.
  */
 
-import type { Container } from "@c-0711/core";
-import type { ChainProof, VerificationResult } from "./types";
+import type { Container } from "@0711/core";
+import type { ChainProof, VerificationResult } from "./types.js";
 
 // GitChain API base URL (the central blockchain service)
 const CHAIN_API_URL =
@@ -76,7 +76,7 @@ async function verifyOnChain(container: Container): Promise<ChainProof> {
       };
     }
 
-    const result = await response.json();
+    const result = await response.json() as any;
 
     return {
       containerId: container.id,
@@ -134,7 +134,7 @@ export async function verifyHash(
       };
     }
 
-    const result = await response.json();
+    const result = await response.json() as any;
 
     return {
       containerId: "",

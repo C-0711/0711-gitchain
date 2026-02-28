@@ -5,6 +5,6 @@
  * Provides provenance and authenticity for digital assets.
  */
 
-export { C2PAService, getC2PAService } from "./service";
-export { signContent, verifyContent, extractManifest } from "./operations";
-export type { C2PAConfig, C2PAManifest, SignatureResult, VerificationResult } from "./types";
+export { C2PAService, getC2PAService } from "./service.js";
+export { signContent, verifyContent, extractManifest } from "./operations.js";
+export type { C2PAConfig, C2PAManifest, SignatureResult, VerificationResult } from "./types.js";

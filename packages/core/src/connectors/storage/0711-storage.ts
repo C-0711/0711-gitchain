@@ -14,7 +14,7 @@ import type {
   ListResult,
   StorageStats,
   HealthCheckResult,
-} from "../types";
+} from "../types.js";
 
 interface Storage0711Config extends StorageConfig {
   type: "0711-storage";

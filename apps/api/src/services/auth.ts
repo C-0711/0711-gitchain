@@ -95,8 +95,8 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 // ===========================================
 
 export function generateToken(userId: string): { token: string; expiresAt: Date } {
-  const expiresIn = JWT_EXPIRES_IN;
-  const token = jwt.sign({ sub: userId }, getJwtSecret(), { expiresIn });
+  const options: jwt.SignOptions = { expiresIn: JWT_EXPIRES_IN as any };
+  const token = jwt.sign({ sub: userId }, getJwtSecret(), options);
   
   // Calculate expiry date
   const decoded = jwt.decode(token) as { exp: number };

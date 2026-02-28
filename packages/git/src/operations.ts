@@ -2,8 +2,8 @@
  * Git operations for containers
  */
 
-import { GitRepository } from "./repository";
-import type { GitConfig, CommitInfo, DiffResult, DiffChange } from "./types";
+import { GitRepository } from "./repository.js";
+import type { GitConfig, CommitInfo, DiffResult, DiffChange } from "./types.js";
 
 const defaultConfig: GitConfig = {
   baseDir: process.env.GITCHAIN_DATA_DIR || "/data/gitchain/repos",

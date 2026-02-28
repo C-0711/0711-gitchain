@@ -4,13 +4,13 @@
  * Client SDK for interacting with GitChain API
  */
 
-export { GitChainClient } from "./client";
-export type { 
+export { GitChainClient } from "./client.js";
+export type {
   GitChainConfig,
   Container,
   InjectOptions,
   InjectResult,
-} from "./types";
+} from "./types.js";
 
 // Re-export core types
 export type {

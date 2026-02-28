@@ -47,7 +47,7 @@ export function createChainRouter(): Router {
   const router = Router();
 
   // Initialize chain DB schema on first load
-  initializeSchema().catch((err) => {
+  initializeSchema().catch((err: unknown) => {
     console.error("[Chain] Schema init failed:", err);
   });
 
@@ -239,7 +239,7 @@ export function createChainRouter(): Router {
         res.json({
           queueSize,
           batchCount: batches.length,
-          batches: batches.map((b) => ({
+          batches: batches.map((b: any) => ({
             batchId: b.batchId,
             merkleRoot: b.merkleRoot,
             itemCount: b.itemCount,

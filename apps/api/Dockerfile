@@ -2,55 +2,26 @@
 # Multi-stage build for minimal image size and security
 
 # ===========================================
-# Stage 1: Dependencies
+# Stage 1: Build
 # ===========================================
-FROM node:20-alpine AS deps
+FROM node:20-alpine AS builder
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@10.29.1 --activate
 
 WORKDIR /app
 
-# Copy workspace configuration
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-
-# Copy all package.json files for dependency resolution
-COPY apps/api/package.json ./apps/api/
-COPY packages/chain/package.json ./packages/chain/
-COPY packages/core/package.json ./packages/core/
-COPY packages/git/package.json ./packages/git/
-COPY packages/inject/package.json ./packages/inject/
-COPY packages/ipfs/package.json ./packages/ipfs/
-
-# Install dependencies
-RUN pnpm install --frozen-lockfile --prod=false
-
-# ===========================================
-# Stage 2: Builder
-# ===========================================
-FROM node:20-alpine AS builder
-
-RUN corepack enable && corepack prepare pnpm@10.29.1 --activate
-
-WORKDIR /app
-
-# Copy dependencies
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
-COPY --from=deps /app/packages/chain/node_modules ./packages/chain/node_modules
-COPY --from=deps /app/packages/core/node_modules ./packages/core/node_modules
-COPY --from=deps /app/packages/git/node_modules ./packages/git/node_modules
-COPY --from=deps /app/packages/inject/node_modules ./packages/inject/node_modules
-COPY --from=deps /app/packages/ipfs/node_modules ./packages/ipfs/node_modules
-
-# Copy source files
-COPY package.json pnpm-workspace.yaml tsconfig.json ./
+# Copy everything needed for build
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.json ./
 COPY apps/api ./apps/api
 COPY packages/chain ./packages/chain
 COPY packages/core ./packages/core
 COPY packages/git ./packages/git
 COPY packages/inject ./packages/inject
 COPY packages/ipfs ./packages/ipfs
+
+# Install dependencies (shamefully-hoist creates flat node_modules without symlinks)
+RUN pnpm install --frozen-lockfile --shamefully-hoist
 
 # Build all packages and API
 RUN pnpm --filter @0711/core build && \
@@ -60,8 +31,17 @@ RUN pnpm --filter @0711/core build && \
     pnpm --filter @0711/ipfs build && \
     pnpm --filter @0711/api build
 
+# Dereference symlinks and bake workspace packages into node_modules
+RUN cp -rL /app/node_modules /app/flat_modules 2>/dev/null || true && \
+    mkdir -p /app/flat_modules/@0711 && \
+    cp -r /app/packages/core /app/flat_modules/@0711/core && \
+    cp -r /app/packages/chain /app/flat_modules/@0711/chain && \
+    cp -r /app/packages/git /app/flat_modules/@0711/git && \
+    cp -r /app/packages/inject /app/flat_modules/@0711/inject && \
+    cp -r /app/packages/ipfs /app/flat_modules/@0711/ipfs
+
 # ===========================================
-# Stage 3: Production Runner
+# Stage 2: Production Runner
 # ===========================================
 FROM node:20-alpine AS runner
 
@@ -79,20 +59,8 @@ ENV PORT=3000
 COPY --from=builder --chown=gitchain:nodejs /app/apps/api/dist ./dist
 COPY --from=builder --chown=gitchain:nodejs /app/apps/api/package.json ./
 
-# Copy workspace packages (built)
-COPY --from=builder --chown=gitchain:nodejs /app/packages/core/dist ./node_modules/@0711/core/dist
-COPY --from=builder --chown=gitchain:nodejs /app/packages/core/package.json ./node_modules/@0711/core/
-COPY --from=builder --chown=gitchain:nodejs /app/packages/chain/dist ./node_modules/@0711/chain/dist
-COPY --from=builder --chown=gitchain:nodejs /app/packages/chain/package.json ./node_modules/@0711/chain/
-COPY --from=builder --chown=gitchain:nodejs /app/packages/git/dist ./node_modules/@0711/git/dist
-COPY --from=builder --chown=gitchain:nodejs /app/packages/git/package.json ./node_modules/@0711/git/
-COPY --from=builder --chown=gitchain:nodejs /app/packages/inject/dist ./node_modules/@0711/inject/dist
-COPY --from=builder --chown=gitchain:nodejs /app/packages/inject/package.json ./node_modules/@0711/inject/
-COPY --from=builder --chown=gitchain:nodejs /app/packages/ipfs/dist ./node_modules/@0711/ipfs/dist
-COPY --from=builder --chown=gitchain:nodejs /app/packages/ipfs/package.json ./node_modules/@0711/ipfs/
-
-# Install production dependencies only
-COPY --from=deps /app/node_modules ./node_modules
+# Copy dereferenced node_modules with workspace packages baked in
+COPY --from=builder --chown=gitchain:nodejs /app/flat_modules ./node_modules
 
 # Switch to non-root user
 USER gitchain

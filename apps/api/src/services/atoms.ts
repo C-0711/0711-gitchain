@@ -7,7 +7,7 @@
  */
 
 import { Pool, PoolClient } from 'pg';
-import {
+import type {
   DataAtom,
   DataAtomSource,
   DataAtomCitation,
@@ -16,12 +16,11 @@ import {
   Contributor,
   TrustLevel,
   SourceType,
-  SOURCE_TO_TRUST,
-  TRUST_PRIORITY,
   InjectOptions,
   InjectResponse,
   ProductContainerManifest,
-} from '../types/atom';
+} from '@0711/core';
+import { SOURCE_TO_TRUST, TRUST_PRIORITY } from '@0711/core';
 
 // ============================================================================
 // ATOM SERVICE
