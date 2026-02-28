@@ -1,13 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Pool } from "pg";
-
-const pool = new Pool({
-  host: "localhost",
-  port: 5440,
-  database: "gitchain",
-  user: "gitchain",
-  password: "gitchain2026",
-});
+import { pool, getUserIdFromToken } from "@/lib/db";
 
 // GET /api/organizations - List all organizations
 export async function GET() {
@@ -57,18 +49,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user from auth header (simplified for now)
+    // Get user from auth header (using secure JWT verification)
     const authHeader = request.headers.get("authorization");
-    let userId = null;
-    
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      try {
-        // Simple JWT decode (in production, use proper verification)
-        const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-        userId = payload.userId;
-      } catch {}
-    }
+    const userId = getUserIdFromToken(authHeader);
 
     // Create organization
     const orgResult = await pool.query(

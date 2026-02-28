@@ -1,22 +1,23 @@
 import { NextResponse } from "next/server";
-import { Pool } from "pg";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import crypto from "crypto";
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || "postgresql://gitchain:gitchain2026@localhost:5440/gitchain",
-});
-
-const JWT_SECRET = process.env.JWT_SECRET || "gitchain-secret-key-2026";
+import { pool } from "@/lib/db";
+import { generateToken } from "@/lib/auth";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { validateBody, loginSchema } from "@/lib/validation";
 
 export async function POST(req: Request) {
-  try {
-    const { email, password } = await req.json();
+  // Apply strict rate limiting for auth endpoints
+  const rateLimitResponse = applyRateLimit(req, RATE_LIMITS.auth);
+  if (rateLimitResponse) return rateLimitResponse;
 
-    if (!email || !password) {
-      return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
-    }
+  // Validate input
+  const validation = await validateBody(req, loginSchema);
+  if ("error" in validation) return validation.error;
+
+  const { email, password } = validation.data;
+
+  try {
 
     const result = await pool.query(
       "SELECT id, email, name, username, password_hash, avatar_url FROM users WHERE email = $1 AND deleted_at IS NULL",
@@ -37,12 +38,8 @@ export async function POST(req: Request) {
     // Update last login
     await pool.query("UPDATE users SET last_login_at = NOW() WHERE id = $1", [user.id]);
 
-    // Create JWT token
-    const token = jwt.sign(
-      { userId: user.id, email: user.email },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    // Create JWT token using secure auth module
+    const { token } = generateToken(user.id, user.email);
 
     // Hash token for storage
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");

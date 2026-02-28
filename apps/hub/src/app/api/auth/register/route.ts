@@ -1,26 +1,23 @@
 import { NextResponse } from "next/server";
-import { Pool } from "pg";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || "postgresql://gitchain:gitchain2026@localhost:5440/gitchain",
-});
-
-const JWT_SECRET = process.env.JWT_SECRET || "gitchain-secret-key-2026";
+import crypto from "crypto";
+import { pool } from "@/lib/db";
+import { generateToken } from "@/lib/auth";
+import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { validateBody, registerSchema } from "@/lib/validation";
 
 export async function POST(req: Request) {
+  // Apply strict rate limiting for auth endpoints
+  const rateLimitResponse = applyRateLimit(req, RATE_LIMITS.auth);
+  if (rateLimitResponse) return rateLimitResponse;
+
+  // Validate input (includes password strength check)
+  const validation = await validateBody(req, registerSchema);
+  if ("error" in validation) return validation.error;
+
+  const { name, email, password } = validation.data;
+
   try {
-    const { name, email, password } = await req.json();
-
-    if (!name || !email || !password) {
-      return NextResponse.json({ error: "Name, email, and password are required" }, { status: 400 });
-    }
-
-    if (password.length < 8) {
-      return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
-    }
-
     // Check if email already exists
     const existing = await pool.query(
       "SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL",
@@ -47,17 +44,16 @@ export async function POST(req: Request) {
 
     const user = result.rows[0];
 
-    // Create JWT token
-    const token = jwt.sign(
-      { userId: user.id, email: user.email },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    // Create JWT token using secure auth module
+    const { token } = generateToken(user.id, user.email);
 
-    // Create session
+    // Hash token for storage
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+    // Create session with hashed token
     await pool.query(
-      "INSERT INTO sessions (user_id, token, expires_at) VALUES ($1, $2, NOW() + INTERVAL '7 days')",
-      [user.id, token]
+      "INSERT INTO sessions (user_id, token_hash, expires_at) VALUES ($1, $2, NOW() + INTERVAL '7 days')",
+      [user.id, tokenHash]
     );
 
     return NextResponse.json({

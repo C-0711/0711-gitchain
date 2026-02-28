@@ -1,13 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Pool } from "pg";
-
-const pool = new Pool({
-  host: "localhost",
-  port: 5440,
-  database: "gitchain",
-  user: "gitchain",
-  password: "gitchain2026",
-});
+import { pool, getUserIdFromToken } from "@/lib/db";
 
 // GET /api/organizations/[slug]
 export async function GET(
@@ -29,21 +21,18 @@ export async function GET(
 
     const org = orgResult.rows[0];
 
-    // Get user role if authenticated
+    // Get user role if authenticated (using secure JWT verification)
     let role = null;
     const authHeader = request.headers.get("authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      try {
-        const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-        const memberResult = await pool.query(
-          "SELECT role FROM organization_members WHERE org_id = $1 AND user_id = $2 AND status = 'active'",
-          [org.id, payload.userId]
-        );
-        if (memberResult.rows.length > 0) {
-          role = memberResult.rows[0].role;
-        }
-      } catch {}
+    const userId = getUserIdFromToken(authHeader);
+    if (userId) {
+      const memberResult = await pool.query(
+        "SELECT role FROM organization_members WHERE org_id = $1 AND user_id = $2 AND status = 'active'",
+        [org.id, userId]
+      );
+      if (memberResult.rows.length > 0) {
+        role = memberResult.rows[0].role;
+      }
     }
 
     // Get stats
