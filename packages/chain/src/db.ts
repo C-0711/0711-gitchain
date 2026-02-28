@@ -1,18 +1,22 @@
-// 0711 Studio Content Chain Database
-// Persistent storage for manifests, batches, proofs, and audit logs
+/**
+ * @0711/chain — Database Layer
+ *
+ * Persistent storage for manifests, batches, proofs, and audit logs.
+ * Uses GitChain's PostgreSQL database (port 5440).
+ */
 
-import { Pool, PoolClient } from 'pg';
+import { Pool } from "pg";
 
 // ============================================
 // DATABASE CONNECTION
 // ============================================
 
+const DATABASE_URL =
+  process.env.DATABASE_URL ||
+  `postgresql://${process.env.DB_USER || "gitchain"}:${process.env.DB_PASSWORD || "gitchain2026"}@${process.env.DB_HOST || "localhost"}:${process.env.DB_PORT || "5440"}/${process.env.DB_NAME || "gitchain"}`;
+
 const pool = new Pool({
-  host: process.env.CONTENT_CHAIN_DB_HOST || process.env.BOSCH_DB_HOST || 'localhost',
-  port: parseInt(process.env.CONTENT_CHAIN_DB_PORT || process.env.BOSCH_DB_PORT || '5434'),
-  database: process.env.CONTENT_CHAIN_DB_NAME || 'content_chain',
-  user: process.env.CONTENT_CHAIN_DB_USER || process.env.BOSCH_DB_USER || 'bosch_user',
-  password: process.env.CONTENT_CHAIN_DB_PASSWORD || process.env.BOSCH_DB_PASSWORD,
+  connectionString: DATABASE_URL,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
@@ -52,12 +56,13 @@ export async function initializeSchema(): Promise<void> {
       CREATE TABLE IF NOT EXISTS certification_batches (
         id SERIAL PRIMARY KEY,
         batch_id INTEGER NOT NULL UNIQUE,
-        merkle_root VARCHAR(64) NOT NULL,
+        merkle_root VARCHAR(128) NOT NULL,
         item_count INTEGER NOT NULL,
         status VARCHAR(20) NOT NULL DEFAULT 'pending',
         on_chain_batch_id INTEGER,
         tx_hash VARCHAR(66),
         block_number INTEGER,
+        network VARCHAR(20) DEFAULT 'base-mainnet',
         ipfs_cid VARCHAR(100),
         metadata_uri TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -67,7 +72,7 @@ export async function initializeSchema(): Promise<void> {
       -- Merkle Proofs
       CREATE TABLE IF NOT EXISTS merkle_proofs (
         id SERIAL PRIMARY KEY,
-        manifest_hash VARCHAR(64) NOT NULL,
+        manifest_hash VARCHAR(128) NOT NULL,
         batch_id INTEGER NOT NULL REFERENCES certification_batches(batch_id),
         leaf_index INTEGER NOT NULL,
         proof JSONB NOT NULL,
@@ -75,8 +80,8 @@ export async function initializeSchema(): Promise<void> {
         UNIQUE(manifest_hash, batch_id)
       );
 
-      -- Audit Log
-      CREATE TABLE IF NOT EXISTS audit_log (
+      -- Chain Audit Log
+      CREATE TABLE IF NOT EXISTS chain_audit_log (
         id SERIAL PRIMARY KEY,
         action VARCHAR(50) NOT NULL,
         entity_type VARCHAR(50) NOT NULL,
@@ -90,16 +95,17 @@ export async function initializeSchema(): Promise<void> {
       );
 
       -- Indexes
-      CREATE INDEX IF NOT EXISTS idx_manifests_batch ON content_manifests(batch_id);
-      CREATE INDEX IF NOT EXISTS idx_manifests_created ON content_manifests(created_at);
-      CREATE INDEX IF NOT EXISTS idx_batches_status ON certification_batches(status);
-      CREATE INDEX IF NOT EXISTS idx_batches_created ON certification_batches(created_at);
-      CREATE INDEX IF NOT EXISTS idx_proofs_batch ON merkle_proofs(batch_id);
-      CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action);
-      CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at);
+      CREATE INDEX IF NOT EXISTS idx_chain_manifests_batch ON content_manifests(batch_id);
+      CREATE INDEX IF NOT EXISTS idx_chain_manifests_manifest_hash ON content_manifests(manifest_hash);
+      CREATE INDEX IF NOT EXISTS idx_chain_manifests_created ON content_manifests(created_at);
+      CREATE INDEX IF NOT EXISTS idx_chain_batches_status ON certification_batches(status);
+      CREATE INDEX IF NOT EXISTS idx_chain_batches_created ON certification_batches(created_at);
+      CREATE INDEX IF NOT EXISTS idx_chain_proofs_batch ON merkle_proofs(batch_id);
+      CREATE INDEX IF NOT EXISTS idx_chain_audit_action ON chain_audit_log(action);
+      CREATE INDEX IF NOT EXISTS idx_chain_audit_created ON chain_audit_log(created_at);
     `);
-    
-    console.log('[ContentChain DB] Schema initialized');
+
+    console.log("[Chain DB] Schema initialized");
   } finally {
     client.release();
   }
@@ -128,8 +134,8 @@ export interface ManifestRecord {
 }
 
 export async function saveManifest(manifest: ManifestRecord): Promise<number> {
-  const result = await pool.query(`
-    INSERT INTO content_manifests (
+  const result = await pool.query(
+    `INSERT INTO content_manifests (
       content_hash, manifest_hash, content_type, model_id, prompt_hash,
       operator_id, organization_id, execution_mode, provider, product_id,
       brand_id, manifest_data, compliance_data, ipfs_cid, batch_id
@@ -140,27 +146,41 @@ export async function saveManifest(manifest: ManifestRecord): Promise<number> {
       ipfs_cid = EXCLUDED.ipfs_cid,
       batch_id = EXCLUDED.batch_id,
       updated_at = NOW()
-    RETURNING id
-  `, [
-    manifest.contentHash, manifest.manifestHash, manifest.contentType,
-    manifest.modelId, manifest.promptHash, manifest.operatorId,
-    manifest.organizationId, manifest.executionMode, manifest.provider,
-    manifest.productId, manifest.brandId, JSON.stringify(manifest.manifestData),
-    manifest.complianceData ? JSON.stringify(manifest.complianceData) : null,
-    manifest.ipfsCid, manifest.batchId
-  ]);
-  
+    RETURNING id`,
+    [
+      manifest.contentHash,
+      manifest.manifestHash,
+      manifest.contentType,
+      manifest.modelId,
+      manifest.promptHash,
+      manifest.operatorId,
+      manifest.organizationId,
+      manifest.executionMode,
+      manifest.provider,
+      manifest.productId,
+      manifest.brandId,
+      JSON.stringify(manifest.manifestData),
+      manifest.complianceData
+        ? JSON.stringify(manifest.complianceData)
+        : null,
+      manifest.ipfsCid,
+      manifest.batchId,
+    ]
+  );
+
   return result.rows[0].id;
 }
 
-export async function getManifest(contentHash: string): Promise<ManifestRecord | null> {
+export async function getManifest(
+  contentHash: string
+): Promise<ManifestRecord | null> {
   const result = await pool.query(
-    'SELECT * FROM content_manifests WHERE content_hash = $1',
+    "SELECT * FROM content_manifests WHERE content_hash = $1",
     [contentHash]
   );
-  
+
   if (result.rows.length === 0) return null;
-  
+
   const row = result.rows[0];
   return {
     contentHash: row.content_hash,
@@ -181,13 +201,15 @@ export async function getManifest(contentHash: string): Promise<ManifestRecord |
   };
 }
 
-export async function getManifestsByBatch(batchId: number): Promise<ManifestRecord[]> {
+export async function getManifestsByBatch(
+  batchId: number
+): Promise<ManifestRecord[]> {
   const result = await pool.query(
-    'SELECT * FROM content_manifests WHERE batch_id = $1 ORDER BY created_at',
+    "SELECT * FROM content_manifests WHERE batch_id = $1 ORDER BY created_at",
     [batchId]
   );
-  
-  return result.rows.map(row => ({
+
+  return result.rows.map((row) => ({
     contentHash: row.content_hash,
     manifestHash: row.manifest_hash,
     contentType: row.content_type,
@@ -199,6 +221,16 @@ export async function getManifestsByBatch(batchId: number): Promise<ManifestReco
   }));
 }
 
+export async function updateManifestBatch(
+  contentHash: string,
+  batchId: number
+): Promise<void> {
+  await pool.query(
+    "UPDATE content_manifests SET batch_id = $1, updated_at = NOW() WHERE content_hash = $2",
+    [batchId, contentHash]
+  );
+}
+
 // ============================================
 // BATCH OPERATIONS
 // ============================================
@@ -207,20 +239,21 @@ export interface BatchRecord {
   batchId: number;
   merkleRoot: string;
   itemCount: number;
-  status: 'pending' | 'submitted' | 'confirmed' | 'failed';
+  status: "pending" | "submitted" | "confirmed" | "failed";
   onChainBatchId?: number;
   txHash?: string;
   blockNumber?: number;
+  network?: string;
   ipfsCid?: string;
   metadataUri?: string;
 }
 
 export async function saveBatch(batch: BatchRecord): Promise<void> {
-  await pool.query(`
-    INSERT INTO certification_batches (
+  await pool.query(
+    `INSERT INTO certification_batches (
       batch_id, merkle_root, item_count, status, on_chain_batch_id,
-      tx_hash, block_number, ipfs_cid, metadata_uri
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      tx_hash, block_number, network, ipfs_cid, metadata_uri
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     ON CONFLICT (batch_id) DO UPDATE SET
       status = EXCLUDED.status,
       on_chain_batch_id = EXCLUDED.on_chain_batch_id,
@@ -228,22 +261,32 @@ export async function saveBatch(batch: BatchRecord): Promise<void> {
       block_number = EXCLUDED.block_number,
       ipfs_cid = EXCLUDED.ipfs_cid,
       metadata_uri = EXCLUDED.metadata_uri,
-      confirmed_at = CASE WHEN EXCLUDED.status = 'confirmed' THEN NOW() ELSE certification_batches.confirmed_at END
-  `, [
-    batch.batchId, batch.merkleRoot, batch.itemCount, batch.status,
-    batch.onChainBatchId, batch.txHash, batch.blockNumber,
-    batch.ipfsCid, batch.metadataUri
-  ]);
+      confirmed_at = CASE WHEN EXCLUDED.status = 'confirmed' THEN NOW() ELSE certification_batches.confirmed_at END`,
+    [
+      batch.batchId,
+      batch.merkleRoot,
+      batch.itemCount,
+      batch.status,
+      batch.onChainBatchId,
+      batch.txHash,
+      batch.blockNumber,
+      batch.network || "base-mainnet",
+      batch.ipfsCid,
+      batch.metadataUri,
+    ]
+  );
 }
 
-export async function getBatch(batchId: number): Promise<BatchRecord | null> {
+export async function getBatch(
+  batchId: number
+): Promise<BatchRecord | null> {
   const result = await pool.query(
-    'SELECT * FROM certification_batches WHERE batch_id = $1',
+    "SELECT * FROM certification_batches WHERE batch_id = $1",
     [batchId]
   );
-  
+
   if (result.rows.length === 0) return null;
-  
+
   const row = result.rows[0];
   return {
     batchId: row.batch_id,
@@ -253,6 +296,7 @@ export async function getBatch(batchId: number): Promise<BatchRecord | null> {
     onChainBatchId: row.on_chain_batch_id,
     txHash: row.tx_hash,
     blockNumber: row.block_number,
+    network: row.network,
     ipfsCid: row.ipfs_cid,
     metadataUri: row.metadata_uri,
   };
@@ -262,8 +306,8 @@ export async function getPendingBatches(): Promise<BatchRecord[]> {
   const result = await pool.query(
     "SELECT * FROM certification_batches WHERE status = 'pending' ORDER BY created_at"
   );
-  
-  return result.rows.map(row => ({
+
+  return result.rows.map((row) => ({
     batchId: row.batch_id,
     merkleRoot: row.merkle_root,
     itemCount: row.item_count,
@@ -283,22 +327,30 @@ export interface ProofRecord {
 }
 
 export async function saveProof(proof: ProofRecord): Promise<void> {
-  await pool.query(`
-    INSERT INTO merkle_proofs (manifest_hash, batch_id, leaf_index, proof)
+  await pool.query(
+    `INSERT INTO merkle_proofs (manifest_hash, batch_id, leaf_index, proof)
     VALUES ($1, $2, $3, $4)
     ON CONFLICT (manifest_hash, batch_id) DO UPDATE SET
-      proof = EXCLUDED.proof
-  `, [proof.manifestHash, proof.batchId, proof.leafIndex, JSON.stringify(proof.proof)]);
+      proof = EXCLUDED.proof`,
+    [
+      proof.manifestHash,
+      proof.batchId,
+      proof.leafIndex,
+      JSON.stringify(proof.proof),
+    ]
+  );
 }
 
-export async function getProof(manifestHash: string): Promise<ProofRecord | null> {
+export async function getProof(
+  manifestHash: string
+): Promise<ProofRecord | null> {
   const result = await pool.query(
-    'SELECT * FROM merkle_proofs WHERE manifest_hash = $1 ORDER BY batch_id DESC LIMIT 1',
+    "SELECT * FROM merkle_proofs WHERE manifest_hash = $1 ORDER BY batch_id DESC LIMIT 1",
     [manifestHash]
   );
-  
+
   if (result.rows.length === 0) return null;
-  
+
   const row = result.rows[0];
   return {
     manifestHash: row.manifest_hash,
@@ -309,7 +361,7 @@ export async function getProof(manifestHash: string): Promise<ProofRecord | null
 }
 
 // ============================================
-// AUDIT LOG OPERATIONS
+// AUDIT LOG
 // ============================================
 
 export interface AuditEntry {
@@ -324,43 +376,48 @@ export interface AuditEntry {
 }
 
 export async function logAudit(entry: AuditEntry): Promise<void> {
-  await pool.query(`
-    INSERT INTO audit_log (action, entity_type, entity_id, actor_id, actor_type, details, ip_address, user_agent)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-  `, [
-    entry.action, entry.entityType, entry.entityId,
-    entry.actorId, entry.actorType,
-    entry.details ? JSON.stringify(entry.details) : null,
-    entry.ipAddress, entry.userAgent
-  ]);
+  await pool.query(
+    `INSERT INTO chain_audit_log (action, entity_type, entity_id, actor_id, actor_type, details, ip_address, user_agent)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [
+      entry.action,
+      entry.entityType,
+      entry.entityId,
+      entry.actorId,
+      entry.actorType,
+      entry.details ? JSON.stringify(entry.details) : null,
+      entry.ipAddress,
+      entry.userAgent,
+    ]
+  );
 }
 
 export async function getAuditLog(
   filters?: { action?: string; entityType?: string; limit?: number }
 ): Promise<AuditEntry[]> {
-  let query = 'SELECT * FROM audit_log WHERE 1=1';
+  let query = "SELECT * FROM chain_audit_log WHERE 1=1";
   const params: any[] = [];
-  
+
   if (filters?.action) {
     params.push(filters.action);
     query += ` AND action = $${params.length}`;
   }
-  
+
   if (filters?.entityType) {
     params.push(filters.entityType);
     query += ` AND entity_type = $${params.length}`;
   }
-  
-  query += ' ORDER BY created_at DESC';
-  
+
+  query += " ORDER BY created_at DESC";
+
   if (filters?.limit) {
     params.push(filters.limit);
     query += ` LIMIT $${params.length}`;
   }
-  
+
   const result = await pool.query(query, params);
-  
-  return result.rows.map(row => ({
+
+  return result.rows.map((row) => ({
     action: row.action,
     entityType: row.entity_type,
     entityId: row.entity_id,
@@ -389,7 +446,7 @@ export async function getStats(): Promise<{
       (SELECT COUNT(*) FROM certification_batches WHERE status = 'confirmed') as confirmed_batches,
       (SELECT COUNT(*) FROM certification_batches WHERE status = 'pending') as pending_batches
   `);
-  
+
   const row = result.rows[0];
   return {
     totalManifests: parseInt(row.total_manifests),
@@ -399,5 +456,4 @@ export async function getStats(): Promise<{
   };
 }
 
-// Export pool for direct queries if needed
 export { pool };

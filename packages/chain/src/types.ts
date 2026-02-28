@@ -96,6 +96,7 @@ export interface CertifyRequest {
   // Optional
   productId?: string;
   brandId?: string;
+  mcpSource?: string;
   
   // Compliance checks to run
   runCompliance?: {
