@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { CommandPalette } from "@/components/CommandPalette";
 
 export const metadata: Metadata = {
   title: "GitChain — Verified Context for AI",
@@ -64,7 +65,10 @@ export default function RootLayout({
           }
         `}} />
       </head>
-      <body>{children}</body>
+      <body>
+        <CommandPalette />
+        {children}
+      </body>
     </html>
   );
 }

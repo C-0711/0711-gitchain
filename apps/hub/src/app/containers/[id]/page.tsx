@@ -4,38 +4,108 @@ import { useState, useRef, useEffect } from "react";
 import { useParams } from "next/navigation";
 
 // ============================================================================
-// GITCHAIN — LIGHT ENTERPRISE THEME
-// GitHub-grade. No blue. No emojis. No AI aesthetic.
+// GITCHAIN — DARK VAULTCLAW-STYLE THEME
+// Clean, dark, professional. Amber accent.
 // ============================================================================
 
 const t = {
-  bg: "#ffffff",
-  canvas: "#f6f8fa",
-  subtle: "#f6f8fa",
-  muted: "#eaeef2",
-  border: "#d1d9e0",
-  borderSub:"#eaeef2",
-  fg: "#1f2328",
-  fgMuted: "#656d76",
-  fgSubtle: "#8b949e",
-  link: "#0969da",
-  green: "#1a7f37",
-  greenBg: "#dafbe1",
-  greenBor: "#aceebb",
-  amber: "#9a6700",
-  amberBg: "#fff8c5",
-  amberBor: "#d4a72c",
-  red: "#d1242f",
-  redBg: "#ffebe9",
-  redBor: "#ff8182",
-  purple: "#8250df",
-  purpleBg: "#fbefff",
-  purpleBor:"#c297ff",
-  accent: "#1f883d",
-  accentHov:"#1a7f37",
-  tabLine: "#fd8c73",
-  overlay: "rgba(27,31,36,0.5)",
+  bg: "#080808",
+  canvas: "#121212",
+  subtle: "#161616",
+  muted: "#1a1a1a",
+  border: "#2a2a2a",
+  borderSub: "#1f1f1f",
+  fg: "#ffffff",
+  fgMuted: "#8b8b8b",
+  fgSubtle: "#666666",
+  link: "#F5A623",
+  green: "#22c55e",
+  greenBg: "rgba(34,197,94,0.15)",
+  greenBor: "rgba(34,197,94,0.3)",
+  amber: "#f59e0b",
+  amberBg: "rgba(245,158,11,0.15)",
+  amberBor: "rgba(245,158,11,0.3)",
+  red: "#ef4444",
+  redBg: "rgba(239,68,68,0.15)",
+  redBor: "rgba(239,68,68,0.3)",
+  purple: "#a78bfa",
+  purpleBg: "rgba(167,139,250,0.15)",
+  purpleBor: "rgba(167,139,250,0.3)",
+  accent: "#F5A623",
+  accentHov: "#d4901d",
+  tabLine: "#F5A623",
+  overlay: "rgba(0,0,0,0.7)",
 };
+
+// File type colors for icons
+const fileTypeColors: Record<string, string> = {
+  json: "#60a5fa",
+  md: "#a78bfa",
+  pdf: "#f87171",
+  jpg: "#4ade80",
+  jpeg: "#4ade80",
+  png: "#4ade80",
+  webp: "#4ade80",
+  gif: "#4ade80",
+  svg: "#4ade80",
+  mp4: "#fb923c",
+  mp3: "#fb923c",
+  wav: "#fb923c",
+  zip: "#94a3b8",
+  tar: "#94a3b8",
+  gz: "#94a3b8",
+  txt: "#8b8b8b",
+  csv: "#22c55e",
+  xml: "#f472b6",
+  html: "#f472b6",
+  default: "#8b8b8b",
+};
+
+function getFileExtension(filename: string): string {
+  const parts = filename.split(".");
+  return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
+}
+
+function getFileColor(filename: string): string {
+  const ext = getFileExtension(filename);
+  return fileTypeColors[ext] || fileTypeColors.default;
+}
+
+// Relative date formatting
+function formatRelativeDate(dateStr: string): string {
+  if (!dateStr) return "";
+
+  // Handle formats like "02/24", "11/15", "2025-11-15"
+  let date: Date;
+  if (dateStr.includes("-")) {
+    date = new Date(dateStr);
+  } else if (dateStr.includes("/")) {
+    const [month, day] = dateStr.split("/");
+    const year = new Date().getFullYear();
+    date = new Date(year, parseInt(month) - 1, parseInt(day));
+    // If date is in the future, assume previous year
+    if (date > new Date()) {
+      date = new Date(year - 1, parseInt(month) - 1, parseInt(day));
+    }
+  } else {
+    return dateStr;
+  }
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 60) return diffMins <= 1 ? "Just now" : `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
+  return `${Math.floor(diffDays / 365)}y ago`;
+}
 
 const mono = "'SFMono-Regular','Consolas','Liberation Mono','Menlo',monospace";
 const sans = "-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans',Helvetica,Arial,sans-serif";
@@ -61,7 +131,117 @@ const Icon = {
   Dot: ({s=8, color="#1a7f37"}: {s?: number; color?: string}) => <svg width={s} height={s} viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill={color}/></svg>,
   Check: ({s=16}: {s?: number}) => <svg width={s} height={s} viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 1.042-.018.751.751 0 0 1 .018 1.042L6 13.06l6.72-6.72a.75.75 0 0 1 1.06 0Z"/></svg>,
   Ext: ({s=16}: {s?: number}) => <svg width={s} height={s} viewBox="0 0 16 16" fill="currentColor"><path d="M3.75 2h3.5a.75.75 0 0 1 0 1.5h-3.5a.25.25 0 0 0-.25.25v8.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-3.5a.75.75 0 0 1 1.5 0v3.5A1.75 1.75 0 0 1 12.25 14h-8.5A1.75 1.75 0 0 1 2 12.25v-8.5C2 2.784 2.784 2 3.75 2Zm6.854-1h4.146a.25.25 0 0 1 .25.25v4.146a.25.25 0 0 1-.427.177L13.03 4.03 9.28 7.78a.751.751 0 0 1-1.06-1.06l3.75-3.75-1.543-1.543A.25.25 0 0 1 10.604 1Z"/></svg>,
+  MoreVert: ({s=16}: {s?: number}) => <svg width={s} height={s} viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>,
+  Eye: ({s=16}: {s?: number}) => <svg width={s} height={s} viewBox="0 0 16 16" fill="currentColor"><path d="M8 2c1.981 0 3.671.992 4.933 2.078 1.27 1.091 2.187 2.345 2.637 3.023a1.62 1.62 0 0 1 0 1.798c-.45.678-1.367 1.932-2.637 3.023C11.67 13.008 9.981 14 8 14s-3.671-.992-4.933-2.078C1.797 10.831.88 9.577.43 8.899a1.62 1.62 0 0 1 0-1.798c.45-.678 1.367-1.932 2.637-3.023C4.33 2.992 6.019 2 8 2Zm0 1.5c-1.622 0-2.974.802-4.041 1.76C2.757 6.359 1.898 7.5 1.5 8c.398.5 1.257 1.641 2.459 2.74C5.026 11.698 6.378 12.5 8 12.5c1.622 0 2.974-.802 4.041-1.76 1.202-1.099 2.061-2.24 2.459-2.74-.398-.5-1.257-1.641-2.459-2.74C10.974 4.302 9.622 3.5 8 3.5ZM8 5a3 3 0 1 1 0 6 3 3 0 0 1 0-6Zm0 1.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/></svg>,
+  Robot: ({s=16}: {s?: number}) => <svg width={s} height={s} viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a1 1 0 0 1 1 1v1h2a3 3 0 0 1 3 3v1h1a1 1 0 1 1 0 2h-1v2h1a1 1 0 1 1 0 2h-1v1a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-1H1a1 1 0 1 1 0-2h1V8H1a1 1 0 0 1 0-2h1V5a3 3 0 0 1 3-3h2V1a1 1 0 0 1 1-1ZM5 3.5A1.5 1.5 0 0 0 3.5 5v8A1.5 1.5 0 0 0 5 14.5h6a1.5 1.5 0 0 0 1.5-1.5V5A1.5 1.5 0 0 0 11 3.5Zm1 3a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm4 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm-4 4h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1Z"/></svg>,
+  Pencil: ({s=16}: {s?: number}) => <svg width={s} height={s} viewBox="0 0 16 16" fill="currentColor"><path d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61Zm.176 4.823L9.75 4.81l-6.286 6.287a.253.253 0 0 0-.064.108l-.558 1.953 1.953-.558a.253.253 0 0 0 .108-.064Zm1.238-3.763a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354Z"/></svg>,
+  Move: ({s=16}: {s?: number}) => <svg width={s} height={s} viewBox="0 0 16 16" fill="currentColor"><path d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.927-1.236A1.75 1.75 0 0 0 4.972 1ZM1.5 2.75a.25.25 0 0 1 .25-.25h3.222a.25.25 0 0 1 .2.1l.927 1.236c.374.498.97.789 1.601.789h6.55a.25.25 0 0 1 .25.25v8.5a.25.25 0 0 1-.25.25H1.75a.25.25 0 0 1-.25-.25Zm8.22 2.47a.75.75 0 0 1 1.06 0l2.25 2.25a.75.75 0 0 1 0 1.06l-2.25 2.25a.75.75 0 1 1-1.06-1.06l.97-.97H5.75a.75.75 0 0 1 0-1.5h4.94l-.97-.97a.75.75 0 0 1 0-1.06Z"/></svg>,
+  Tag: ({s=16}: {s?: number}) => <svg width={s} height={s} viewBox="0 0 16 16" fill="currentColor"><path d="M1 7.775V2.75C1 1.784 1.784 1 2.75 1h5.025c.464 0 .91.184 1.238.513l6.25 6.25a1.75 1.75 0 0 1 0 2.474l-5.026 5.026a1.75 1.75 0 0 1-2.474 0l-6.25-6.25A1.752 1.752 0 0 1 1 7.775Zm1.5 0c0 .066.026.13.073.177l6.25 6.25a.25.25 0 0 0 .354 0l5.025-5.025a.25.25 0 0 0 0-.354l-6.25-6.25a.25.25 0 0 0-.177-.073H2.75a.25.25 0 0 0-.25.25ZM6 5a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>,
+  Star: ({s=16}: {s?: number}) => <svg width={s} height={s} viewBox="0 0 16 16" fill="currentColor"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Zm0 2.445L6.615 5.5a.75.75 0 0 1-.564.41l-3.097.45 2.24 2.184a.75.75 0 0 1 .216.664l-.528 3.084 2.769-1.456a.75.75 0 0 1 .698 0l2.77 1.456-.53-3.084a.75.75 0 0 1 .216-.664l2.24-2.183-3.096-.45a.75.75 0 0 1-.564-.41L8 2.694Z"/></svg>,
+  Share: ({s=16}: {s?: number}) => <svg width={s} height={s} viewBox="0 0 16 16" fill="currentColor"><path d="M3.5 3.75a.25.25 0 0 1 .25-.25h7.5a.25.25 0 0 1 .25.25v2.5a.75.75 0 0 0 1.5 0v-2.5A1.75 1.75 0 0 0 11.25 2h-7.5A1.75 1.75 0 0 0 2 3.75v8.5c0 .966.784 1.75 1.75 1.75h7.5A1.75 1.75 0 0 0 13 12.25v-2.5a.75.75 0 0 0-1.5 0v2.5a.25.25 0 0 1-.25.25h-7.5a.25.25 0 0 1-.25-.25ZM5 8a.75.75 0 0 1 .75-.75h5.19L9.22 5.53a.75.75 0 0 1 1.06-1.06l3 3a.75.75 0 0 1 0 1.06l-3 3a.75.75 0 1 1-1.06-1.06l1.72-1.72H5.75A.75.75 0 0 1 5 8Z"/></svg>,
+  Trash: ({s=16}: {s?: number}) => <svg width={s} height={s} viewBox="0 0 16 16" fill="currentColor"><path d="M11 1.75V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75ZM4.496 6.675l.66 6.6a.25.25 0 0 0 .249.225h5.19a.25.25 0 0 0 .249-.225l.66-6.6a.75.75 0 0 1 1.492.149l-.66 6.6A1.748 1.748 0 0 1 10.595 15h-5.19a1.75 1.75 0 0 1-1.741-1.575l-.66-6.6a.75.75 0 1 1 1.492-.15ZM6.5 1.75V3h3V1.75a.25.25 0 0 0-.25-.25h-2.5a.25.25 0 0 0-.25.25Z"/></svg>,
+  Summary: ({s=16}: {s?: number}) => <svg width={s} height={s} viewBox="0 0 16 16" fill="currentColor"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v12.5A1.75 1.75 0 0 1 14.25 16H1.75A1.75 1.75 0 0 1 0 14.25ZM1.5 1.75v12.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V1.75a.25.25 0 0 0-.25-.25H1.75a.25.25 0 0 0-.25.25ZM3 4.25a.75.75 0 0 1 .75-.75h8.5a.75.75 0 0 1 0 1.5h-8.5A.75.75 0 0 1 3 4.25Zm0 3.75a.75.75 0 0 1 .75-.75h8.5a.75.75 0 0 1 0 1.5h-8.5A.75.75 0 0 1 3 8Zm0 3.75a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Z"/></svg>,
+  Extract: ({s=16}: {s?: number}) => <svg width={s} height={s} viewBox="0 0 16 16" fill="currentColor"><path d="M10.5 5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0Zm.061 3.073a4 4 0 1 0-5.123 0 6.004 6.004 0 0 0-3.431 5.142.75.75 0 0 0 1.498.07 4.5 4.5 0 0 1 8.99 0 .75.75 0 1 0 1.498-.07 6.004 6.004 0 0 0-3.432-5.142Z"/></svg>,
 };
+
+// --- File Context Menu ---
+function FileContextMenu({ open, onClose, anchorRef, atom }: { open: boolean; onClose: () => void; anchorRef: React.RefObject<HTMLElement>; atom: AtomData }) {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (open && anchorRef.current) {
+      const rect = anchorRef.current.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom + 4,
+        left: rect.right - 180,
+      });
+    }
+  }, [open, anchorRef]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    if (open) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const menuItems = [
+    { icon: <Icon.File s={14}/>, label: "Open", divider: false },
+    { icon: <Icon.Eye s={14}/>, label: "Preview", divider: true },
+    { icon: <Icon.Robot s={14}/>, label: "AI Analysis", badge: "Agent", divider: false },
+    { icon: <Icon.Summary s={14}/>, label: "Summarize", badge: "Agent", divider: false },
+    { icon: <Icon.Extract s={14}/>, label: "Extract Data", badge: "Agent", divider: true },
+    { icon: <Icon.Pencil s={14}/>, label: "Rename", divider: false },
+    { icon: <Icon.Move s={14}/>, label: "Move to...", divider: false },
+    { icon: <Icon.Tag s={14}/>, label: "Add Tags", divider: false },
+    { icon: <Icon.Star s={14}/>, label: "Star", divider: true },
+    { icon: <Icon.Share s={14}/>, label: "Share", divider: false },
+    { icon: <Icon.Download s={14}/>, label: "Download", divider: true },
+    { icon: <Icon.Trash s={14}/>, label: "Delete", danger: true, divider: false },
+  ];
+
+  return (
+    <div ref={menuRef} style={{
+      position: "fixed",
+      top: position.top,
+      left: position.left,
+      width: 180,
+      backgroundColor: t.canvas,
+      border: `1px solid ${t.border}`,
+      borderRadius: 8,
+      boxShadow: "0 8px 30px rgba(0,0,0,0.4)",
+      zIndex: 300,
+      overflow: "hidden",
+      padding: "4px 0",
+    }}>
+      {menuItems.map((item, i) => (
+        <div key={i}>
+          <button
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "8px 12px",
+              fontSize: 13,
+              color: item.danger ? t.red : t.fg,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              textAlign: "left",
+              transition: "background-color 0.1s",
+            }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = t.muted)}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+          >
+            <span style={{ color: item.danger ? t.red : t.fgMuted }}>{item.icon}</span>
+            <span style={{ flex: 1 }}>{item.label}</span>
+            {item.badge && (
+              <span style={{
+                fontSize: 9,
+                fontWeight: 600,
+                padding: "2px 5px",
+                borderRadius: 4,
+                backgroundColor: t.amberBg,
+                color: t.amber,
+                textTransform: "uppercase",
+                letterSpacing: "0.02em",
+              }}>{item.badge}</span>
+            )}
+          </button>
+          {item.divider && <div style={{ height: 1, backgroundColor: t.borderSub, margin: "4px 0" }} />}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // --- Types ---
 interface AtomData {
@@ -84,8 +264,8 @@ type AtomOrFolder = AtomData | FolderData;
 // --- Badge ---
 function Badge({ label, variant = "default" }: { label: string; variant?: string }) {
   const variants: Record<string, { bg: string; color: string; bor: string }> = {
-    default: { bg: t.canvas, color: t.fgMuted, bor: t.border },
-    immutable: { bg: t.canvas, color: t.fgSubtle, bor: t.border },
+    default: { bg: t.subtle, color: t.fgMuted, bor: t.border },
+    immutable: { bg: t.subtle, color: t.fgSubtle, bor: t.border },
     mutable: { bg: t.amberBg, color: t.amber, bor: t.amberBor },
     versioned: { bg: t.purpleBg, color: t.purple, bor: t.purpleBor },
     success: { bg: t.greenBg, color: t.green, bor: t.greenBor },
@@ -95,8 +275,8 @@ function Badge({ label, variant = "default" }: { label: string; variant?: string
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 3,
-      padding: "0 6px", fontSize: 12, fontWeight: 500, fontFamily: mono,
-      lineHeight: "20px", borderRadius: 6,
+      padding: "0 6px", fontSize: 11, fontWeight: 500, fontFamily: mono,
+      lineHeight: "18px", borderRadius: 4,
       border: `1px solid ${v.bor}`, backgroundColor: v.bg, color: v.color,
     }}>
       {variant === "immutable" && <Icon.Lock s={10}/>}
@@ -147,8 +327,8 @@ function PullDropdown({ open, onClose }: { open: boolean; onClose: () => void })
   return (
     <div ref={ref} style={{
       position: "absolute", top: "100%", right: 0, marginTop: 4, width: 420,
-      backgroundColor: t.bg, border: `1px solid ${t.border}`, borderRadius: 8,
-      boxShadow: "0 8px 30px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08)",
+      backgroundColor: t.canvas, border: `1px solid ${t.border}`, borderRadius: 8,
+      boxShadow: "0 8px 30px rgba(0,0,0,0.5)",
       zIndex: 100, overflow: "hidden",
     }}>
       <div style={{ padding: "12px 16px", borderBottom: `1px solid ${t.borderSub}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -185,10 +365,11 @@ function PullDropdown({ open, onClose }: { open: boolean; onClose: () => void })
             <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
               {[{id:"ts",label:"TypeScript"},{id:"py",label:"Python"}].map(l => (
                 <button key={l.id} onClick={() => setSdkLang(l.id)} style={{
-                  padding: "3px 8px", fontSize: 12, borderRadius: 6,
-                  border: `1px solid ${sdkLang === l.id ? t.border : t.borderSub}`,
-                  background: sdkLang === l.id ? t.canvas : "transparent",
-                  color: sdkLang === l.id ? t.fg : t.fgMuted, cursor: "pointer",
+                  padding: "4px 10px", fontSize: 12, borderRadius: 6,
+                  border: `1px solid ${sdkLang === l.id ? t.accent : t.border}`,
+                  background: sdkLang === l.id ? t.amberBg : t.subtle,
+                  color: sdkLang === l.id ? t.accent : t.fgMuted, cursor: "pointer",
+                  transition: "all 0.1s",
                 }}>{l.label}</button>
               ))}
             </div>
@@ -199,16 +380,23 @@ function PullDropdown({ open, onClose }: { open: boolean; onClose: () => void })
           <div>
             <div style={{ fontSize: 12, color: t.fgMuted, marginBottom: 12 }}>Download as archive:</div>
             <button style={{
-              width: "100%", padding: "8px 16px", backgroundColor: t.accent, color: "#fff",
+              width: "100%", padding: "10px 16px", backgroundColor: t.accent, color: t.bg,
               border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            }}><Icon.Download s={14}/> Download ZIP</button>
+              transition: "background-color 0.1s",
+            }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = t.accentHov)}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = t.accent)}
+            ><Icon.Download s={14}/> Download ZIP</button>
           </div>
         )}
       </div>
-      <div style={{ padding: "8px 16px", borderTop: `1px solid ${t.borderSub}`, display: "flex", alignItems: "center", justifyContent: "space-between", backgroundColor: t.canvas }}>
+      <div style={{ padding: "10px 16px", borderTop: `1px solid ${t.borderSub}`, display: "flex", alignItems: "center", justifyContent: "space-between", backgroundColor: t.subtle }}>
         <span style={{ fontFamily: mono, fontSize: 11, color: t.fgSubtle }}>{cid}</span>
-        <button onClick={() => copy(cid, "cid")} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: t.fgMuted, fontSize: 11, cursor: "pointer" }}>
+        <button onClick={() => copy(cid, "cid")} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: t.fgMuted, fontSize: 11, cursor: "pointer", transition: "color 0.1s" }}
+          onMouseEnter={e => (e.currentTarget.style.color = t.fg)}
+          onMouseLeave={e => (e.currentTarget.style.color = t.fgMuted)}
+        >
           {copied === "cid" ? <><Icon.Check s={12}/> Copied</> : <><Icon.Copy s={12}/> Copy ID</>}
         </button>
       </div>
@@ -218,9 +406,12 @@ function PullDropdown({ open, onClose }: { open: boolean; onClose: () => void })
 
 function CodeBlock({ text, id, copied, onCopy }: { text: string; id: string; copied: string | null; onCopy: (t: string, i: string) => void }) {
   return (
-    <div style={{ position: "relative", backgroundColor: t.canvas, border: `1px solid ${t.borderSub}`, borderRadius: 6, overflow: "hidden" }}>
-      <pre style={{ margin: 0, padding: "10px 40px 10px 12px", fontFamily: mono, fontSize: 12, lineHeight: 1.5, color: t.fg, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{text}</pre>
-      <button onClick={() => onCopy(text, id)} style={{ position: "absolute", top: 6, right: 6, padding: "4px 6px", background: t.bg, border: `1px solid ${t.border}`, borderRadius: 4, cursor: "pointer", color: t.fgMuted, display: "flex", alignItems: "center" }}>
+    <div style={{ position: "relative", backgroundColor: t.subtle, border: `1px solid ${t.border}`, borderRadius: 6, overflow: "hidden" }}>
+      <pre style={{ margin: 0, padding: "12px 40px 12px 14px", fontFamily: mono, fontSize: 12, lineHeight: 1.6, color: t.fg, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{text}</pre>
+      <button onClick={() => onCopy(text, id)} style={{ position: "absolute", top: 8, right: 8, padding: "4px 6px", background: t.muted, border: `1px solid ${t.border}`, borderRadius: 4, cursor: "pointer", color: t.fgMuted, display: "flex", alignItems: "center", transition: "color 0.1s, background-color 0.1s" }}
+        onMouseEnter={e => { e.currentTarget.style.backgroundColor = t.border; e.currentTarget.style.color = t.fg; }}
+        onMouseLeave={e => { e.currentTarget.style.backgroundColor = t.muted; e.currentTarget.style.color = t.fgMuted; }}
+      >
         {copied === id ? <Icon.Check s={14}/> : <Icon.Copy s={14}/>}
       </button>
     </div>
@@ -241,35 +432,48 @@ function AtomDetailPanel({ atom, onClose }: { atom: AtomData | null; onClose: ()
   };
 
   const data = sampleData[atom.n];
+  const fileColor = getFileColor(atom.n);
 
   return (
-    <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: 560, backgroundColor: t.bg, borderLeft: `1px solid ${t.border}`, boxShadow: "-4px 0 24px rgba(0,0,0,0.08)", zIndex: 200, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      <div style={{ padding: "12px 16px", borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 8, backgroundColor: t.canvas, flexShrink: 0 }}>
-        <Icon.File s={16}/>
-        <span style={{ fontFamily: mono, fontSize: 14, fontWeight: 600, flex: 1 }}>{atom.n}</span>
+    <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: 560, backgroundColor: t.bg, borderLeft: `1px solid ${t.border}`, boxShadow: "-8px 0 40px rgba(0,0,0,0.5)", zIndex: 200, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div style={{ padding: "14px 16px", borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 10, backgroundColor: t.canvas, flexShrink: 0 }}>
+        <span style={{ color: fileColor }}><Icon.File s={18}/></span>
+        <span style={{ fontFamily: mono, fontSize: 15, fontWeight: 600, flex: 1, color: t.fg }}>{atom.n}</span>
         <Badge label={atom.m} variant={atom.m} />
-        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.fgMuted, fontSize: 18, padding: "2px 6px", lineHeight: 1 }}>&times;</button>
+        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.fgMuted, fontSize: 20, padding: "2px 8px", lineHeight: 1, borderRadius: 4, transition: "color 0.1s" }}
+          onMouseEnter={e => (e.currentTarget.style.color = t.fg)}
+          onMouseLeave={e => (e.currentTarget.style.color = t.fgMuted)}
+        >&times;</button>
       </div>
-      <div style={{ padding: "12px 16px", borderBottom: `1px solid ${t.borderSub}`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 12, backgroundColor: t.canvas, flexShrink: 0 }}>
+      <div style={{ padding: "14px 16px", borderBottom: `1px solid ${t.borderSub}`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, fontSize: 13, backgroundColor: t.canvas, flexShrink: 0 }}>
         <div><span style={{ color: t.fgSubtle }}>Contributor:</span> <span style={{ fontFamily: mono, color: t.fg }}>{atom.c}</span></div>
-        <div><span style={{ color: t.fgSubtle }}>Type:</span> <span style={{ fontFamily: mono, color: atom.ct === "A" ? t.amber : t.fg, fontWeight: 600 }}>{atom.ct === "A" ? "AI-generated" : "Original (Mfr)"}</span></div>
+        <div><span style={{ color: t.fgSubtle }}>Type:</span> <span style={{ fontFamily: mono, color: atom.ct === "A" ? t.amber : t.green, fontWeight: 600 }}>{atom.ct === "A" ? "AI-generated" : "Original (Mfr)"}</span></div>
         <div><span style={{ color: t.fgSubtle }}>Trust:</span> <Trust score={atom.tr} /></div>
-        <div><span style={{ color: t.fgSubtle }}>Updated:</span> <span style={{ fontFamily: mono }}>{atom.d}</span></div>
+        <div><span style={{ color: t.fgSubtle }}>Updated:</span> <span style={{ fontFamily: mono, color: t.fgMuted }}>{formatRelativeDate(atom.d)}</span></div>
       </div>
       <div style={{ flex: 1, overflow: "auto", padding: 16 }}>
         {data ? (
-          <div style={{ backgroundColor: t.canvas, border: `1px solid ${t.borderSub}`, borderRadius: 6, overflow: "hidden" }}>
-            <pre style={{ margin: 0, padding: 16, fontFamily: mono, fontSize: 12, lineHeight: 1.6, color: t.fg, whiteSpace: "pre-wrap" }}>{JSON.stringify(data, null, 2)}</pre>
+          <div style={{ backgroundColor: t.subtle, border: `1px solid ${t.border}`, borderRadius: 8, overflow: "hidden" }}>
+            <pre style={{ margin: 0, padding: 16, fontFamily: mono, fontSize: 12, lineHeight: 1.7, color: t.fg, whiteSpace: "pre-wrap" }}>{JSON.stringify(data, null, 2)}</pre>
           </div>
         ) : (
           <div style={{ color: t.fgSubtle, fontSize: 13, textAlign: "center", padding: 40 }}>No preview available</div>
         )}
       </div>
-      <div style={{ padding: "10px 16px", borderTop: `1px solid ${t.border}`, display: "flex", gap: 8, backgroundColor: t.canvas, flexShrink: 0 }}>
-        <button style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", fontSize: 12, fontWeight: 500, border: `1px solid ${t.border}`, borderRadius: 6, background: t.bg, color: t.fg, cursor: "pointer" }}><Icon.Clock s={12}/> History</button>
-        <button style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", fontSize: 12, fontWeight: 500, border: `1px solid ${t.border}`, borderRadius: 6, background: t.bg, color: t.fg, cursor: "pointer" }}><Icon.Copy s={12}/> Raw</button>
+      <div style={{ padding: "12px 16px", borderTop: `1px solid ${t.border}`, display: "flex", gap: 8, backgroundColor: t.canvas, flexShrink: 0 }}>
+        <button style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", fontSize: 12, fontWeight: 500, border: `1px solid ${t.border}`, borderRadius: 6, background: t.subtle, color: t.fg, cursor: "pointer", transition: "background-color 0.1s" }}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = t.muted)}
+          onMouseLeave={e => (e.currentTarget.style.backgroundColor = t.subtle)}
+        ><Icon.Clock s={12}/> History</button>
+        <button style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", fontSize: 12, fontWeight: 500, border: `1px solid ${t.border}`, borderRadius: 6, background: t.subtle, color: t.fg, cursor: "pointer", transition: "background-color 0.1s" }}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = t.muted)}
+          onMouseLeave={e => (e.currentTarget.style.backgroundColor = t.subtle)}
+        ><Icon.Copy s={12}/> Raw</button>
         <div style={{ flex: 1 }} />
-        <button style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", fontSize: 12, fontWeight: 500, border: `1px solid ${t.border}`, borderRadius: 6, background: t.bg, color: t.link, cursor: "pointer" }}><Icon.Ext s={12}/> Open full</button>
+        <button style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", fontSize: 12, fontWeight: 500, border: `1px solid ${t.accent}`, borderRadius: 6, background: "transparent", color: t.accent, cursor: "pointer", transition: "background-color 0.1s" }}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = t.amberBg)}
+          onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+        ><Icon.Ext s={12}/> Open full</button>
       </div>
     </div>
   );
@@ -288,13 +492,16 @@ function CommitsTab() {
       <div style={{ fontSize: 13, color: t.fgMuted, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
         <Icon.Commit s={14}/><span><strong style={{ color: t.fg }}>3</strong> commits on <strong style={{ color: t.fg }}>main</strong></span>
       </div>
-      <div style={{ border: `1px solid ${t.border}`, borderRadius: 6, overflow: "hidden" }}>
+      <div style={{ border: `1px solid ${t.border}`, borderRadius: 8, overflow: "hidden" }}>
         {commits.map((c, i) => (
-          <div key={c.hash} style={{ padding: "12px 16px", borderBottom: i < commits.length - 1 ? `1px solid ${t.borderSub}` : "none", display: "flex", alignItems: "center", gap: 12 }}>
+          <div key={c.hash} style={{ padding: "14px 16px", borderBottom: i < commits.length - 1 ? `1px solid ${t.borderSub}` : "none", display: "flex", alignItems: "center", gap: 12, backgroundColor: t.bg, transition: "background-color 0.15s" }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = t.muted)}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = t.bg)}
+          >
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 600, fontSize: 14, color: t.fg, marginBottom: 4 }}>{c.message}</div>
               <div style={{ fontSize: 12, color: t.fgMuted, display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 14, height: 14, borderRadius: 3, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, backgroundColor: c.authorType === "A" ? t.amberBg : t.canvas, border: `1px solid ${c.authorType === "A" ? t.amberBor : t.border}`, color: c.authorType === "A" ? t.amber : t.fgSubtle }}>{c.authorType}</span>
+                <span style={{ width: 14, height: 14, borderRadius: 3, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, backgroundColor: c.authorType === "A" ? t.amberBg : t.subtle, border: `1px solid ${c.authorType === "A" ? t.amberBor : t.border}`, color: c.authorType === "A" ? t.amber : t.fgSubtle }}>{c.authorType}</span>
                 <span style={{ fontFamily: mono }}>{c.author}</span>
                 <span>committed on {c.date}</span>
               </div>
@@ -302,7 +509,7 @@ function CommitsTab() {
             <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 12, fontFamily: mono, flexShrink: 0 }}>
               <span style={{ color: t.green }}>+{c.stats.added}</span>
               {c.stats.modified > 0 && <span style={{ color: t.amber }}>~{c.stats.modified}</span>}
-              <span style={{ color: t.link, padding: "2px 8px", backgroundColor: t.canvas, border: `1px solid ${t.borderSub}`, borderRadius: 4 }}>{c.hash}</span>
+              <span style={{ color: t.accent, padding: "3px 8px", backgroundColor: t.subtle, border: `1px solid ${t.border}`, borderRadius: 4 }}>{c.hash}</span>
             </div>
           </div>
         ))}
@@ -318,11 +525,14 @@ function PullRequestsTab() {
       <div style={{ fontSize: 13, color: t.fgMuted, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
         <Icon.PR s={14}/><span><strong style={{ color: t.fg }}>0</strong> open pull requests</span>
       </div>
-      <div style={{ border: `1px solid ${t.border}`, borderRadius: 6, padding: 40, textAlign: "center", backgroundColor: t.canvas }}>
-        <div style={{ color: t.fgSubtle, marginBottom: 8 }}><Icon.PR s={24}/></div>
-        <div style={{ fontSize: 16, fontWeight: 600, color: t.fg, marginBottom: 4 }}>No open pull requests</div>
+      <div style={{ border: `1px solid ${t.border}`, borderRadius: 8, padding: 48, textAlign: "center", backgroundColor: t.canvas }}>
+        <div style={{ color: t.fgSubtle, marginBottom: 12 }}><Icon.PR s={28}/></div>
+        <div style={{ fontSize: 16, fontWeight: 600, color: t.fg, marginBottom: 6 }}>No open pull requests</div>
         <div style={{ fontSize: 13, color: t.fgMuted, maxWidth: 400, margin: "0 auto" }}>Pull requests let contributors propose changes to atoms in this container.</div>
-        <button style={{ marginTop: 16, padding: "6px 14px", fontSize: 13, fontWeight: 600, backgroundColor: t.accent, color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>New pull request</button>
+        <button style={{ marginTop: 20, padding: "8px 18px", fontSize: 13, fontWeight: 600, backgroundColor: t.accent, color: t.bg, border: "none", borderRadius: 6, cursor: "pointer", transition: "background-color 0.1s" }}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = t.accentHov)}
+          onMouseLeave={e => (e.currentTarget.style.backgroundColor = t.accent)}
+        >New pull request</button>
       </div>
     </div>
   );
@@ -335,9 +545,9 @@ function ConflictsTab() {
       <div style={{ fontSize: 13, color: t.fgMuted, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
         <Icon.Alert s={14}/><span><strong style={{ color: t.fg }}>0</strong> active conflicts</span>
       </div>
-      <div style={{ border: `1px solid ${t.border}`, borderRadius: 6, padding: 40, textAlign: "center", backgroundColor: t.canvas }}>
-        <div style={{ color: t.green, marginBottom: 8 }}><Icon.Check s={24}/></div>
-        <div style={{ fontSize: 16, fontWeight: 600, color: t.fg, marginBottom: 4 }}>All clear</div>
+      <div style={{ border: `1px solid ${t.border}`, borderRadius: 8, padding: 48, textAlign: "center", backgroundColor: t.canvas }}>
+        <div style={{ color: t.green, marginBottom: 12 }}><Icon.Check s={28}/></div>
+        <div style={{ fontSize: 16, fontWeight: 600, color: t.fg, marginBottom: 6 }}>All clear</div>
         <div style={{ fontSize: 13, color: t.fgMuted, maxWidth: 400, margin: "0 auto" }}>No conflicting data detected between manufacturer data and AI-generated atoms.</div>
       </div>
     </div>
@@ -365,34 +575,34 @@ function GraphTab() {
     { from: "self", to: "acc4", type: "compatible" },
     { from: "rep", to: "self", type: "replaced" },
   ];
-  const nodeColor: Record<string, string> = { current: t.accent, family: t.purple, compatible: t.link, replaced: t.fgSubtle };
-  const edgeColor: Record<string, string> = { family: t.purple, compatible: t.link, replaced: t.fgSubtle };
+  const nodeColor: Record<string, string> = { current: t.accent, family: t.purple, compatible: t.green, replaced: t.fgSubtle };
+  const edgeColor: Record<string, string> = { family: t.purple, compatible: t.green, replaced: t.fgSubtle };
 
   return (
     <div>
-      <div style={{ fontSize: 13, color: t.fgMuted, marginBottom: 16, display: "flex", alignItems: "center", gap: 16 }}>
-        <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Icon.Dot s={8} color={t.accent}/> Current</span>
-        <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Icon.Dot s={8} color={t.purple}/> Family</span>
-        <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Icon.Dot s={8} color={t.link}/> Compatible</span>
-        <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Icon.Dot s={8} color={t.fgSubtle}/> Replaced by</span>
+      <div style={{ fontSize: 13, color: t.fgMuted, marginBottom: 16, display: "flex", alignItems: "center", gap: 20 }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon.Dot s={8} color={t.accent}/> Current</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon.Dot s={8} color={t.purple}/> Family</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon.Dot s={8} color={t.green}/> Compatible</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon.Dot s={8} color={t.fgSubtle}/> Replaced by</span>
       </div>
-      <div style={{ border: `1px solid ${t.border}`, borderRadius: 6, overflow: "hidden", backgroundColor: t.canvas, position: "relative" }}>
+      <div style={{ border: `1px solid ${t.border}`, borderRadius: 8, overflow: "hidden", backgroundColor: t.subtle, position: "relative" }}>
         <svg width="100%" height="380" viewBox="0 0 660 380" style={{ display: "block" }}>
           <defs><marker id="arrowGray" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill={t.fgSubtle}/></marker></defs>
           {edges.map((e, i) => {
             const from = nodes.find(n => n.id === e.from)!;
             const to = nodes.find(n => n.id === e.to)!;
-            return <line key={i} x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={edgeColor[e.type]} strokeWidth={1.5} strokeDasharray={e.type === "replaced" ? "4 3" : "none"} markerEnd={e.type === "replaced" ? "url(#arrowGray)" : ""} opacity={0.5} />;
+            return <line key={i} x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={edgeColor[e.type]} strokeWidth={1.5} strokeDasharray={e.type === "replaced" ? "4 3" : "none"} markerEnd={e.type === "replaced" ? "url(#arrowGray)" : ""} opacity={0.6} />;
           })}
           {nodes.map(n => (
-            <g key={n.id}>
-              <circle cx={n.x} cy={n.y} r={n.type === "current" ? 8 : 5} fill={nodeColor[n.type]} stroke={t.bg} strokeWidth={2}/>
-              <text x={n.x} y={n.y + (n.type === "current" ? 22 : 18)} textAnchor="middle" fontSize={11} fontFamily={mono} fill={t.fg} fontWeight={n.type === "current" ? 700 : 400}>{n.label}</text>
+            <g key={n.id} style={{ cursor: "pointer" }}>
+              <circle cx={n.x} cy={n.y} r={n.type === "current" ? 10 : 6} fill={nodeColor[n.type]} stroke={t.bg} strokeWidth={2}/>
+              <text x={n.x} y={n.y + (n.type === "current" ? 24 : 20)} textAnchor="middle" fontSize={11} fontFamily={mono} fill={t.fg} fontWeight={n.type === "current" ? 700 : 400}>{n.label}</text>
             </g>
           ))}
         </svg>
       </div>
-      <div style={{ marginTop: 12, padding: "10px 14px", fontSize: 12, color: t.fgMuted, backgroundColor: t.canvas, border: `1px solid ${t.borderSub}`, borderRadius: 6, display: "flex", gap: 24 }}>
+      <div style={{ marginTop: 12, padding: "12px 16px", fontSize: 12, color: t.fgMuted, backgroundColor: t.canvas, border: `1px solid ${t.border}`, borderRadius: 8, display: "flex", gap: 28 }}>
         <span><strong style={{ color: t.fg }}>3</strong> family variants</span>
         <span><strong style={{ color: t.fg }}>44</strong> compatible products</span>
         <span><strong style={{ color: t.fg }}>1</strong> predecessor</span>
@@ -401,24 +611,93 @@ function GraphTab() {
   );
 }
 
+// --- AI Status Badge ---
+function AIStatus({ analyzed }: { analyzed: boolean }) {
+  if (!analyzed) return <span style={{ color: t.fgSubtle, fontSize: 12 }}>—</span>;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: t.green, fontSize: 12 }}>
+      <Icon.Check s={12} /> Analyzed
+    </span>
+  );
+}
+
 // --- Atom Row ---
 function AtomRow({ a, last, onClick }: { a: AtomData; last: boolean; onClick: () => void }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const fileColor = getFileColor(a.n);
+
   return (
-    <div onClick={onClick} style={{ display: "grid", gridTemplateColumns: "1fr 160px 1fr 60px 56px", padding: "7px 16px 7px 40px", borderBottom: last ? "none" : `1px solid ${t.borderSub}`, backgroundColor: t.bg, fontSize: 13, alignItems: "center", cursor: "pointer", transition: "background-color 0.1s" }}
-      onMouseEnter={e => (e.currentTarget.style.backgroundColor = t.canvas)}
-      onMouseLeave={e => (e.currentTarget.style.backgroundColor = t.bg)}>
-      <span style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-        <span style={{ color: t.fgSubtle }}><Icon.File s={14}/></span>
-        <span style={{ color: t.link, fontFamily: mono, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.n}</span>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 100px 70px 90px 40px",
+        padding: "10px 16px 10px 40px",
+        borderBottom: last ? "none" : `1px solid ${t.borderSub}`,
+        backgroundColor: t.bg,
+        fontSize: 13,
+        alignItems: "center",
+        cursor: "pointer",
+        transition: "background-color 0.15s"
+      }}
+      onMouseEnter={e => (e.currentTarget.style.backgroundColor = t.muted)}
+      onMouseLeave={e => (e.currentTarget.style.backgroundColor = t.bg)}
+    >
+      {/* Name column */}
+      <span
+        onClick={onClick}
+        style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}
+      >
+        <span style={{ color: fileColor, flexShrink: 0 }}><Icon.File s={16}/></span>
+        <span style={{ color: t.fg, fontFamily: mono, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.n}</span>
         <Badge label={a.m} variant={a.m} />
       </span>
-      <span style={{ display: "flex", alignItems: "center", gap: 4, color: t.fgMuted, fontSize: 12, fontFamily: mono }}>
-        <span style={{ width: 14, height: 14, borderRadius: 3, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, flexShrink: 0, backgroundColor: a.ct === "A" ? t.amberBg : t.canvas, border: `1px solid ${a.ct === "A" ? t.amberBor : t.border}`, color: a.ct === "A" ? t.amber : t.fgSubtle }}>{a.ct}</span>
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.c}</span>
+
+      {/* AI Status column */}
+      <span onClick={onClick}>
+        <AIStatus analyzed={a.ct === "A" || a.tr > 0} />
       </span>
-      <span style={{ color: t.fgMuted, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.msg}</span>
-      <span style={{ textAlign: "right" }}><Trust score={a.tr} /></span>
-      <span style={{ textAlign: "right", color: t.fgSubtle, fontSize: 12, fontFamily: mono }}>{a.d}</span>
+
+      {/* Trust column */}
+      <span onClick={onClick} style={{ textAlign: "left" }}>
+        <Trust score={a.tr} />
+      </span>
+
+      {/* Date column */}
+      <span onClick={onClick} style={{ color: t.fgSubtle, fontSize: 12 }}>
+        {formatRelativeDate(a.d)}
+      </span>
+
+      {/* Menu column */}
+      <span style={{ textAlign: "right" }}>
+        <button
+          ref={menuButtonRef}
+          onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 28,
+            height: 28,
+            background: "none",
+            border: "none",
+            borderRadius: 4,
+            color: t.fgSubtle,
+            cursor: "pointer",
+            transition: "background-color 0.1s, color 0.1s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.backgroundColor = t.border; e.currentTarget.style.color = t.fg; }}
+          onMouseLeave={e => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = t.fgSubtle; }}
+        >
+          <Icon.MoreVert s={16} />
+        </button>
+        <FileContextMenu
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          anchorRef={menuButtonRef as React.RefObject<HTMLElement>}
+          atom={a}
+        />
+      </span>
     </div>
   );
 }
@@ -529,34 +808,37 @@ export default function ContainerPage() {
     <div style={{ minHeight: "100vh", backgroundColor: t.bg, color: t.fg, fontFamily: sans, fontSize: 14 }}>
 
       {/* CONTAINER HEADER */}
-      <div style={{ borderBottom: `1px solid ${t.border}`, padding: "16px 32px 0", backgroundColor: t.canvas }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-          <span style={{ fontFamily: mono, fontSize: 16 }}>
+      <div style={{ borderBottom: `1px solid ${t.border}`, padding: "20px 32px 0", backgroundColor: t.canvas }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+          <span style={{ fontFamily: mono, fontSize: 17 }}>
             <span style={{ color: t.fgMuted }}>{container?.namespace || "0711:product"} / </span>
-            <a href="#" style={{ color: t.link, textDecoration: "none", fontWeight: 700 }}>{container?.identifier || "..."}</a>
+            <a href="#" style={{ color: t.accent, textDecoration: "none", fontWeight: 700 }}>{container?.identifier || "..."}</a>
           </span>
         </div>
-        <p style={{ fontSize: 14, color: t.fgMuted, margin: "4px 0 12px" }}>
+        <p style={{ fontSize: 14, color: t.fgMuted, margin: "6px 0 14px" }}>
           <strong style={{ color: t.fg }}>{container?.name || "Loading..."}</strong> — {container?.description || ""} · ETIM {container?.etim?.class || "..."}
         </p>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, fontSize: 12, color: t.fgMuted, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18, fontSize: 12, color: t.fgMuted, flexWrap: "wrap" }}>
           <span>Trust: <strong style={{ color: t.fg }}>{container?.stats?.mfrTrust || 0}%</strong> mfr / <strong style={{ color: t.fg }}>{container?.stats?.aiTrust || 0}%</strong> ai</span>
-          <span style={{ color: t.borderSub }}>·</span>
+          <span style={{ color: t.border }}>·</span>
           <span><strong style={{ color: t.fg }}>{container?.stats?.atomCount || 0}</strong> atoms</span>
-          <span style={{ color: t.borderSub }}>·</span>
+          <span style={{ color: t.border }}>·</span>
           <span><strong style={{ color: t.fg }}>{container?.stats?.mediaCount || 0}</strong> media</span>
-          <span style={{ color: t.borderSub }}>·</span>
+          <span style={{ color: t.border }}>·</span>
           <span><strong style={{ color: t.fg }}>{container?.stats?.familyCount || 0}</strong> family</span>
-          <span style={{ color: t.borderSub }}>·</span>
+          <span style={{ color: t.border }}>·</span>
           <span><strong style={{ color: t.fg }}>{container?.stats?.compatibleCount || 0}</strong> compatible</span>
-          <span style={{ color: t.borderSub }}>·</span>
+          <span style={{ color: t.border }}>·</span>
           <Badge label={`${container?.stats?.score || 0}% ${container?.stats?.grade || "?"}`} variant="success" />
         </div>
         <nav style={{ display: "flex", gap: 0, marginBottom: -1 }}>
           {tabs.map(tb => (
-            <button key={tb.id} onClick={() => setActiveTab(tb.id)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", fontSize: 14, fontWeight: activeTab === tb.id ? 600 : 400, color: activeTab === tb.id ? t.fg : t.fgMuted, background: "none", border: "none", borderBottom: activeTab === tb.id ? `2px solid ${t.tabLine}` : "2px solid transparent", cursor: "pointer" }}>
+            <button key={tb.id} onClick={() => setActiveTab(tb.id)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 18px", fontSize: 14, fontWeight: activeTab === tb.id ? 600 : 400, color: activeTab === tb.id ? t.fg : t.fgMuted, background: "none", border: "none", borderBottom: activeTab === tb.id ? `2px solid ${t.tabLine}` : "2px solid transparent", cursor: "pointer", transition: "color 0.1s" }}
+              onMouseEnter={e => { if (activeTab !== tb.id) e.currentTarget.style.color = t.fg; }}
+              onMouseLeave={e => { if (activeTab !== tb.id) e.currentTarget.style.color = t.fgMuted; }}
+            >
               {tb.icon}{tb.label}
-              {tb.count != null && <span style={{ backgroundColor: t.muted, color: t.fgMuted, fontSize: 11, fontFamily: mono, padding: "0 6px", borderRadius: 10 }}>{tb.count}</span>}
+              {tb.count != null && <span style={{ backgroundColor: t.subtle, color: t.fgMuted, fontSize: 11, fontFamily: mono, padding: "1px 7px", borderRadius: 10 }}>{tb.count}</span>}
             </button>
           ))}
         </nav>
@@ -567,15 +849,21 @@ export default function ContainerPage() {
         {activeTab === "code" && (
           <>
             {/* Branch bar */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-              <button style={{ display: "flex", alignItems: "center", gap: 6, backgroundColor: t.canvas, border: `1px solid ${t.border}`, borderRadius: 6, padding: "5px 12px", color: t.fg, fontSize: 13, fontWeight: 500, cursor: "pointer" }}><Icon.Branch s={14}/> main <Icon.Chev s={12}/></button>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20, flexWrap: "wrap" }}>
+              <button style={{ display: "flex", alignItems: "center", gap: 6, backgroundColor: t.subtle, border: `1px solid ${t.border}`, borderRadius: 6, padding: "7px 14px", color: t.fg, fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "background-color 0.1s" }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = t.muted)}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = t.subtle)}
+              ><Icon.Branch s={14}/> main <Icon.Chev s={12}/></button>
               <span style={{ fontFamily: mono, fontSize: 13, color: t.fgMuted }}>
-                <span style={{ color: t.link }}>b7e3201</span> · Initial import: BMEcat + media files… · 2025-11-15
+                <span style={{ color: t.accent }}>b7e3201</span> · Initial import: BMEcat + media files… · 2025-11-15
               </span>
               <span style={{ fontFamily: mono, fontSize: 12, color: t.fgSubtle }}>3 commits</span>
               <div style={{ flex: 1 }} />
               <div style={{ position: "relative" }}>
-                <button onClick={() => setPullOpen(!pullOpen)} style={{ display: "flex", alignItems: "center", gap: 6, backgroundColor: t.accent, color: "#fff", border: "none", borderRadius: 6, padding: "6px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                <button onClick={() => setPullOpen(!pullOpen)} style={{ display: "flex", alignItems: "center", gap: 6, backgroundColor: t.accent, color: t.bg, border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "background-color 0.1s" }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = t.accentHov)}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = t.accent)}
+                >
                   <Icon.Download s={14}/> Pull container <Icon.Chev s={12}/>
                 </button>
                 <PullDropdown open={pullOpen} onClose={() => setPullOpen(false)} />
@@ -583,23 +871,47 @@ export default function ContainerPage() {
             </div>
 
             {/* File table */}
-            <div style={{ border: `1px solid ${t.border}`, borderRadius: 6, overflow: "hidden" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 160px 1fr 60px 56px", padding: "8px 16px", backgroundColor: t.canvas, borderBottom: `1px solid ${t.border}`, fontSize: 12, fontWeight: 600, color: t.fgMuted, textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                <span>Name</span><span>Contributor</span><span>Last commit</span>
-                <span style={{ textAlign: "right" }}>Trust</span><span style={{ textAlign: "right" }}>Date</span>
+            <div style={{ border: `1px solid ${t.border}`, borderRadius: 8, overflow: "hidden" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 70px 90px 40px", padding: "10px 16px", backgroundColor: t.canvas, borderBottom: `1px solid ${t.border}`, fontSize: 11, fontWeight: 600, color: t.fgSubtle, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <span>Name</span><span>AI Status</span><span>Trust</span>
+                <span>Modified</span><span></span>
               </div>
               {atoms.map((item, i) => {
                 if ('folder' in item) {
                   const open = folders[item.folder];
                   return (
                     <div key={item.folder}>
-                      <div onClick={() => setFolders(p => ({...p, [item.folder]: !p[item.folder]}))} style={{ display: "grid", gridTemplateColumns: "1fr 160px 1fr 60px 56px", padding: "7px 16px", borderBottom: `1px solid ${t.borderSub}`, cursor: "pointer", backgroundColor: t.bg }}>
-                        <span style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 500 }}>
-                          <span style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s", display: "inline-flex" }}><Icon.ChevR s={12}/></span>
-                          <span style={{ color: t.fgSubtle }}><Icon.Folder s={14}/></span>
-                          <span style={{ fontFamily: mono, fontSize: 13 }}>{item.folder}/</span>
-                          <span style={{ fontSize: 11, color: t.fgSubtle, fontFamily: mono }}>{item.children.length}</span>
+                      <div
+                        onClick={() => setFolders(p => ({...p, [item.folder]: !p[item.folder]}))}
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 100px 70px 90px 40px",
+                          padding: "10px 16px",
+                          borderBottom: `1px solid ${t.borderSub}`,
+                          cursor: "pointer",
+                          backgroundColor: t.bg,
+                          transition: "background-color 0.15s"
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = t.muted)}
+                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = t.bg)}
+                      >
+                        <span style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 500 }}>
+                          <span style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s", display: "inline-flex", color: t.fgSubtle }}><Icon.ChevR s={12}/></span>
+                          <span style={{ color: t.link }}><Icon.Folder s={16}/></span>
+                          <span style={{ fontFamily: mono, fontSize: 13, color: t.fg }}>{item.folder}/</span>
+                          <span style={{
+                            fontSize: 10,
+                            color: t.fgMuted,
+                            fontFamily: mono,
+                            backgroundColor: t.subtle,
+                            padding: "2px 6px",
+                            borderRadius: 4,
+                          }}>{item.children.length}</span>
                         </span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
                       </div>
                       {open && item.children.map((a, j) => <AtomRow key={a.n} a={a} last={j === item.children.length - 1} onClick={() => setSelectedAtom(a)} />)}
                     </div>

@@ -83,17 +83,29 @@ export default function Navbar() {
 
           {/* Right side */}
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {/* Search */}
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              backgroundColor: t.sunken,
-              border: `1px solid ${t.border}`,
-              borderRadius: 6,
-              padding: "5px 10px",
-              width: 220,
-            }}>
+            {/* Search - triggers CommandPalette */}
+            <button
+              onClick={() => {
+                // Dispatch keyboard event to open command palette
+                document.dispatchEvent(
+                  new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true })
+                );
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                backgroundColor: t.sunken,
+                border: `1px solid ${t.border}`,
+                borderRadius: 6,
+                padding: "5px 10px",
+                width: 220,
+                cursor: "pointer",
+                transition: "border-color 0.15s",
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.borderColor = t.borderStrong}
+              onMouseLeave={(e) => e.currentTarget.style.borderColor = t.border}
+            >
               <svg width="14" height="14" viewBox="0 0 16 16" fill={t.fgSubtle}>
                 <path d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-1.06 1.06ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z"/>
               </svg>
@@ -107,8 +119,8 @@ export default function Navbar() {
                 color: t.fgSubtle,
                 fontFamily: "monospace",
                 backgroundColor: t.bg,
-              }}>/</span>
-            </div>
+              }}>⌘K</span>
+            </button>
 
             {/* Create dropdown */}
             <div style={{ position: "relative" }}>
