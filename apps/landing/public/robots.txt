@@ -1,0 +1,12 @@
+# GitChain Robots.txt
+
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://gitchain.0711.io/sitemap.xml
+
+# Disallow admin and API paths
+Disallow: /api/
+Disallow: /admin/
+Disallow: /_next/
