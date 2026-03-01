@@ -31,6 +31,7 @@ const PUBLIC_ROUTES = [
   "/containers",
   "/users",
   "/inject",
+  "/invite",
 ];
 
 // API routes that don't require authentication
@@ -41,6 +42,7 @@ const PUBLIC_API_ROUTES = [
   "/api/containers", // Public container listing
   "/api/explore",
   "/api/trending",
+  "/api/invites",
 ];
 
 // ===========================================
