@@ -10,13 +10,14 @@
  *   gitchain verify product:bosch:1234
  */
 
-import { Command } from "commander";
-import chalk from "chalk";
-import ora from "ora";
 import * as fs from "fs";
-import * as path from "path";
 import * as os from "os";
+import * as path from "path";
 import * as readline from "readline";
+
+import chalk from "chalk";
+import { Command } from "commander";
+import ora from "ora";
 
 // ============================================
 // CONFIGURATION
@@ -37,7 +38,9 @@ function loadConfig(): Config {
     if (fs.existsSync(CONFIG_FILE)) {
       return JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
     }
-  } catch {}
+  } catch (_) {
+    /* ignore */
+  }
   return {};
 }
 
@@ -53,7 +56,9 @@ function loadToken(): string | null {
     if (fs.existsSync(TOKEN_FILE)) {
       return fs.readFileSync(TOKEN_FILE, "utf8").trim();
     }
-  } catch {}
+  } catch (_) {
+    /* ignore */
+  }
   return null;
 }
 
@@ -69,7 +74,9 @@ function clearToken(): void {
     if (fs.existsSync(TOKEN_FILE)) {
       fs.unlinkSync(TOKEN_FILE);
     }
-  } catch {}
+  } catch (_) {
+    /* ignore */
+  }
 }
 
 function getApiUrl(): string {
@@ -156,10 +163,7 @@ interface SearchResult {
 
 const program = new Command();
 
-program
-  .name("gitchain")
-  .description("Verified context injection for AI agents")
-  .version("0.1.0");
+program.name("gitchain").description("Verified context injection for AI agents").version("0.1.0");
 
 // Pull command
 program
@@ -169,10 +173,10 @@ program
   .option("-o, --output <file>", "Write output to file")
   .action(async (containerId: string, options: { format: string; output?: string }) => {
     const spinner = ora(`Pulling ${containerId}...`).start();
-    
+
     try {
       const response = await fetch(`${API_URL}/api/containers/${encodeURIComponent(containerId)}`);
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           spinner.fail(chalk.red(`Container not found: ${containerId}`));
@@ -180,19 +184,19 @@ program
         }
         throw new Error(`API error: ${response.status}`);
       }
-      
-      const container = await response.json() as Container;
+
+      const container = (await response.json()) as Container;
       spinner.succeed(chalk.green(`Pulled ${containerId}`));
-      
+
       console.log();
       console.log(chalk.dim(`  Type: ${container.type}`));
       console.log(chalk.dim(`  Version: v${container.version}`));
       console.log(chalk.dim(`  Atoms: ${Object.keys(container.data || {}).length}`));
-      
+
       if (container.chain?.verified) {
         console.log(chalk.green(`  ✓ Verified on ${container.chain.network}`));
       }
-      
+
       if (options.output) {
         const fs = await import("fs");
         fs.writeFileSync(options.output, JSON.stringify(container, null, 2));
@@ -211,40 +215,45 @@ program
   .option("-f, --format <format>", "Output format (markdown|json|openai|anthropic)", "markdown")
   .option("-o, --output <file>", "Write output to file")
   .option("--verify", "Verify blockchain proofs", true)
-  .action(async (containerIds: string[], options: { format: string; output?: string; verify: boolean }) => {
-    const spinner = ora(`Injecting ${containerIds.length} container(s)...`).start();
-    
-    try {
-      const response = await fetch(`${API_URL}/api/inject`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          containers: containerIds,
-          format: options.format,
-          verify: options.verify,
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+  .action(
+    async (
+      containerIds: string[],
+      options: { format: string; output?: string; verify: boolean }
+    ) => {
+      const spinner = ora(`Injecting ${containerIds.length} container(s)...`).start();
+
+      try {
+        const response = await fetch(`${API_URL}/api/inject`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            containers: containerIds,
+            format: options.format,
+            verify: options.verify,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+
+        const result = (await response.json()) as InjectResult;
+        spinner.succeed(chalk.green(`Injected ${containerIds.length} container(s)`));
+
+        if (options.output) {
+          const fs = await import("fs");
+          fs.writeFileSync(options.output, result.formatted || JSON.stringify(result, null, 2));
+          console.log(chalk.dim(`\nWritten to ${options.output}`));
+        } else {
+          console.log();
+          console.log(result.formatted || JSON.stringify(result, null, 2));
+        }
+      } catch (error) {
+        spinner.fail(chalk.red(`Failed to inject: ${error}`));
+        process.exit(1);
       }
-      
-      const result = await response.json() as InjectResult;
-      spinner.succeed(chalk.green(`Injected ${containerIds.length} container(s)`));
-      
-      if (options.output) {
-        const fs = await import("fs");
-        fs.writeFileSync(options.output, result.formatted || JSON.stringify(result, null, 2));
-        console.log(chalk.dim(`\nWritten to ${options.output}`));
-      } else {
-        console.log();
-        console.log(result.formatted || JSON.stringify(result, null, 2));
-      }
-    } catch (error) {
-      spinner.fail(chalk.red(`Failed to inject: ${error}`));
-      process.exit(1);
     }
-  });
+  );
 
 // Verify command
 program
@@ -252,16 +261,16 @@ program
   .description("Verify a container against blockchain")
   .action(async (containerId: string) => {
     const spinner = ora(`Verifying ${containerId}...`).start();
-    
+
     try {
       const response = await fetch(`${API_URL}/api/verify/${encodeURIComponent(containerId)}`);
-      
+
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`);
       }
-      
-      const result = await response.json() as VerifyResult;
-      
+
+      const result = (await response.json()) as VerifyResult;
+
       if (result.verified) {
         spinner.succeed(chalk.green(`✓ Verified`));
         console.log();
@@ -285,19 +294,19 @@ program
   .option("-l, --limit <n>", "Max results", "10")
   .action(async (query: string, options: { limit: string }) => {
     const spinner = ora(`Searching...`).start();
-    
+
     try {
       const response = await fetch(
         `${API_URL}/api/search?q=${encodeURIComponent(query)}&limit=${options.limit}`
       );
-      
+
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`);
       }
-      
-      const results = await response.json() as SearchResult[];
+
+      const results = (await response.json()) as SearchResult[];
       spinner.succeed(chalk.green(`Found ${results.length} result(s)`));
-      
+
       console.log();
       for (const r of results) {
         console.log(chalk.bold(`  ${r.id}`));
@@ -339,11 +348,11 @@ program
       });
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
+        const error = (await response.json().catch(() => ({}))) as any;
         throw new Error(error.error || `Login failed: ${response.status}`);
       }
 
-      const { token, user } = await response.json();
+      const { token, user } = (await response.json()) as any;
       saveToken(token);
       spinner.succeed(chalk.green(`Logged in as ${user.email}`));
     } catch (error) {
@@ -381,7 +390,7 @@ program
         throw new Error(`Auth failed: ${response.status}`);
       }
 
-      const user = await response.json();
+      const user = (await response.json()) as any;
       spinner.stop();
       console.log(chalk.bold(`\n  ${user.name || user.username}`));
       console.log(chalk.dim(`  ${user.email}`));
@@ -396,9 +405,7 @@ program
 // CONTAINERS COMMANDS
 // ============================================
 
-const containers = program
-  .command("containers")
-  .description("Manage containers");
+const containers = program.command("containers").description("Manage containers");
 
 containers
   .command("list")
@@ -424,7 +431,7 @@ containers
         throw new Error(`API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as any;
       const list = data.containers || data;
       spinner.succeed(chalk.green(`Found ${list.length} container(s)`));
 
@@ -437,7 +444,9 @@ containers
       for (const c of list) {
         const verified = c.is_verified || c.chain?.verified ? chalk.green("✓") : chalk.dim("○");
         console.log(`  ${verified} ${chalk.bold(c.container_id || c.id)}`);
-        console.log(chalk.dim(`    ${c.type} | ${c.namespace}:${c.identifier} | v${c.version || 1}`));
+        console.log(
+          chalk.dim(`    ${c.type} | ${c.namespace}:${c.identifier} | v${c.version || 1}`)
+        );
       }
       console.log();
     } catch (error) {
@@ -466,7 +475,7 @@ containers
         throw new Error(`API error: ${response.status}`);
       }
 
-      const container = await response.json();
+      const container = (await response.json()) as any;
       spinner.succeed(chalk.green(`Found ${id}`));
 
       if (options.json) {
@@ -496,54 +505,56 @@ containers
   .option("-n, --namespace <namespace>", "Namespace", "default")
   .option("-i, --identifier <id>", "Identifier")
   .option("-f, --file <path>", "Load data from JSON file")
-  .action(async (options: { type: string; namespace: string; identifier?: string; file?: string }) => {
-    const token = loadToken();
-    if (!token) {
-      console.log(chalk.red("Not logged in. Run: gitchain login"));
-      process.exit(1);
-    }
+  .action(
+    async (options: { type: string; namespace: string; identifier?: string; file?: string }) => {
+      const token = loadToken();
+      if (!token) {
+        console.log(chalk.red("Not logged in. Run: gitchain login"));
+        process.exit(1);
+      }
 
-    let data: Record<string, unknown> = {};
+      let data: Record<string, unknown> = {};
 
-    if (options.file) {
+      if (options.file) {
+        try {
+          data = JSON.parse(fs.readFileSync(options.file, "utf8"));
+        } catch (error) {
+          console.log(chalk.red(`Failed to read file: ${error}`));
+          process.exit(1);
+        }
+      }
+
+      const identifier = options.identifier || `item-${Date.now()}`;
+      const spinner = ora(`Creating ${options.type}:${options.namespace}:${identifier}...`).start();
+
       try {
-        data = JSON.parse(fs.readFileSync(options.file, "utf8"));
+        const response = await fetch(`${getApiUrl()}/api/containers`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders(),
+          },
+          body: JSON.stringify({
+            type: options.type,
+            namespace: options.namespace,
+            identifier,
+            data,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = (await response.json().catch(() => ({}))) as any;
+          throw new Error(error.error || `API error: ${response.status}`);
+        }
+
+        const container = (await response.json()) as any;
+        spinner.succeed(chalk.green(`Created ${container.container_id || container.id}`));
       } catch (error) {
-        console.log(chalk.red(`Failed to read file: ${error}`));
+        spinner.fail(chalk.red(`Failed: ${error}`));
         process.exit(1);
       }
     }
-
-    const identifier = options.identifier || `item-${Date.now()}`;
-    const spinner = ora(`Creating ${options.type}:${options.namespace}:${identifier}...`).start();
-
-    try {
-      const response = await fetch(`${getApiUrl()}/api/containers`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeaders(),
-        },
-        body: JSON.stringify({
-          type: options.type,
-          namespace: options.namespace,
-          identifier,
-          data,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || `API error: ${response.status}`);
-      }
-
-      const container = await response.json();
-      spinner.succeed(chalk.green(`Created ${container.container_id || container.id}`));
-    } catch (error) {
-      spinner.fail(chalk.red(`Failed: ${error}`));
-      process.exit(1);
-    }
-  });
+  );
 
 // ============================================
 // CONFIG COMMAND

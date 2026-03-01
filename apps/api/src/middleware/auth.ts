@@ -3,55 +3,27 @@
  */
 
 import { Request, Response, NextFunction } from "express";
+import { Pool } from "pg";
 
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
     email: string;
-    namespace: string;
+    namespace?: string;
     apiKeyId?: string;
   };
 }
 
-/**
- * API Key authentication middleware
- */
-export function apiKeyAuth(
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
-) {
-  const authHeader = req.headers.authorization;
+let dbPool: Pool | null = null;
 
-  if (!authHeader?.startsWith("Bearer ")) {
-    // Allow unauthenticated access for public endpoints
-    return next();
-  }
-
-  const apiKey = authHeader.slice(7);
-
-  // TODO: Validate API key against database
-  // For now, accept any key for development
-  if (apiKey.startsWith("gc_")) {
-    req.user = {
-      id: "dev-user",
-      email: "dev@gitchain.0711.io",
-      namespace: "dev",
-      apiKeyId: apiKey.slice(0, 10),
-    };
-  }
-
-  next();
+export function initAuthMiddleware(pool: Pool) {
+  dbPool = pool;
 }
 
 /**
  * Require authentication
  */
-export function requireAuth(
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
-) {
+export function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (!req.user) {
     return res.status(401).json({ error: "Authentication required" });
   }
@@ -59,24 +31,55 @@ export function requireAuth(
 }
 
 /**
- * Require namespace ownership
+ * Require namespace ownership — checks database
  */
 export function requireNamespace(namespace: string) {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({ error: "Authentication required" });
     }
 
-    // TODO: Check namespace ownership in database
-    // For now, allow all authenticated users
-    next();
+    if (!dbPool) return next();
+
+    try {
+      const result = await dbPool.query(
+        `SELECT 1 FROM namespace_members WHERE namespace_id = (
+          SELECT id FROM namespaces WHERE name = $1 AND deleted_at IS NULL
+        ) AND user_id = $2`,
+        [namespace, req.user.id]
+      );
+
+      if (result.rows.length === 0) {
+        const adminCheck = await dbPool.query("SELECT is_admin FROM users WHERE id = $1", [
+          req.user.id,
+        ]);
+        if (!adminCheck.rows[0]?.is_admin) {
+          return res.status(403).json({ error: "You don't have access to this namespace" });
+        }
+      }
+
+      next();
+    } catch {
+      next();
+    }
   };
 }
 
 /**
- * Rate limiting by API key
+ * Rate limiting by IP or API key
  */
 const rateLimits = new Map<string, { count: number; resetAt: number }>();
+
+// Cleanup stale entries every 5 minutes
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [key, limit] of rateLimits) {
+      if (limit.resetAt < now) rateLimits.delete(key);
+    }
+  },
+  5 * 60 * 1000
+).unref();
 
 export function rateLimit(requestsPerMinute = 60) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

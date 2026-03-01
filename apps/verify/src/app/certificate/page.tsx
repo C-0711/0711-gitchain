@@ -1,8 +1,9 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function CertificatePage() {
+function CertificateContent() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
 
@@ -18,9 +19,7 @@ export default function CertificatePage() {
     <div className="min-h-screen p-8">
       <div className="max-w-2xl mx-auto bg-white text-black rounded-lg shadow-2xl p-8">
         <div className="text-center border-b pb-6 mb-6">
-          <h1 className="text-3xl font-bold text-emerald-600">
-            Certificate of Verification
-          </h1>
+          <h1 className="text-3xl font-bold text-emerald-600">Certificate of Verification</h1>
           <p className="text-gray-500 mt-2">GitChain Blockchain Verification</p>
         </div>
 
@@ -45,8 +44,8 @@ export default function CertificatePage() {
 
         <div className="text-center pt-6 border-t">
           <p className="text-sm text-gray-500">
-            This certificate confirms that the container data is anchored
-            to the Base Mainnet blockchain via GitChain.
+            This certificate confirms that the container data is anchored to the Base Mainnet
+            blockchain via GitChain.
           </p>
           <p className="text-xs text-gray-400 mt-4">
             Contract: 0xAd31465A5618Ffa27eC1f3c0056C2f5CC621aEc7
@@ -69,5 +68,19 @@ export default function CertificatePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CertificatePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      }
+    >
+      <CertificateContent />
+    </Suspense>
   );
 }

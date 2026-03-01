@@ -1,10 +1,11 @@
 /**
  * GitChain Auth Service
- * 
+ *
  * Handles user authentication, API keys, and sessions.
  */
 
 import crypto from "crypto";
+
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
@@ -55,20 +56,11 @@ export interface ApiKeyResult {
 
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
-  const isProduction = process.env.NODE_ENV === "production";
-
   if (!secret) {
-    if (isProduction) {
-      throw new Error(
-        "SECURITY ERROR: JWT_SECRET environment variable is required in production. " +
-          "Never use fallback values for secrets."
-      );
-    }
-    console.warn(
-      "WARNING: JWT_SECRET not set. Using development-only secret. " +
-        "This MUST be set in production."
+    throw new Error(
+      "JWT_SECRET environment variable is required. " +
+        "Generate one with: node -e \"console.log(require('crypto').randomBytes(64).toString('base64'))\""
     );
-    return "gitchain-dev-only-not-for-production";
   }
   return secret;
 }
@@ -97,11 +89,11 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 export function generateToken(userId: string): { token: string; expiresAt: Date } {
   const options: jwt.SignOptions = { expiresIn: JWT_EXPIRES_IN as any };
   const token = jwt.sign({ sub: userId }, getJwtSecret(), options);
-  
+
   // Calculate expiry date
   const decoded = jwt.decode(token) as { exp: number };
   const expiresAt = new Date(decoded.exp * 1000);
-  
+
   return { token, expiresAt };
 }
 
@@ -122,16 +114,16 @@ export function generateApiKey(): { fullKey: string; keyHash: string; keyPrefix:
   // Generate random bytes
   const randomBytes = crypto.randomBytes(API_KEY_LENGTH);
   const randomPart = randomBytes.toString("base64url").slice(0, API_KEY_LENGTH);
-  
+
   // Full key format: gc_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
   const fullKey = `${API_KEY_PREFIX}${randomPart}`;
-  
+
   // Hash for storage
   const keyHash = crypto.createHash("sha256").update(fullKey).digest("hex");
-  
+
   // Prefix for display (first 12 chars)
   const keyPrefix = fullKey.slice(0, 12);
-  
+
   return { fullKey, keyHash, keyPrefix };
 }
 
@@ -190,7 +182,10 @@ export class AuthService {
     const passwordHash = await hashPassword(password);
 
     // Generate username from email
-    const username = email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+    const username = email
+      .split("@")[0]
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
 
     // Create user
     const user = await this.db.insert<User>("users", {
@@ -224,10 +219,7 @@ export class AuthService {
     }
 
     // Update last login
-    await this.db.execute(
-      "UPDATE users SET last_login_at = NOW() WHERE id = $1",
-      [user.id]
-    );
+    await this.db.execute("UPDATE users SET last_login_at = NOW() WHERE id = $1", [user.id]);
 
     // Generate token
     const { token, expiresAt } = generateToken(user.id);
@@ -256,7 +248,11 @@ export class AuthService {
   // API KEYS
   // ===========================================
 
-  async createApiKey(userId: string, name: string, scopes: string[] = ["read", "write"]): Promise<ApiKeyResult> {
+  async createApiKey(
+    userId: string,
+    name: string,
+    scopes: string[] = ["read", "write"]
+  ): Promise<ApiKeyResult> {
     const { fullKey, keyHash, keyPrefix } = generateApiKey();
 
     const apiKey = await this.db.insert<ApiKey>("api_keys", {
@@ -297,10 +293,7 @@ export class AuthService {
     }
 
     // Update last used
-    await this.db.execute(
-      "UPDATE api_keys SET last_used_at = NOW() WHERE id = $1",
-      [result.id]
-    );
+    await this.db.execute("UPDATE api_keys SET last_used_at = NOW() WHERE id = $1", [result.id]);
 
     const user = await this.getUserById(result.user_id);
     if (!user) {
@@ -322,7 +315,11 @@ export class AuthService {
   // SESSIONS
   // ===========================================
 
-  async createSession(userId: string, ip?: string, userAgent?: string): Promise<{ session: Session; token: string }> {
+  async createSession(
+    userId: string,
+    ip?: string,
+    userAgent?: string
+  ): Promise<{ session: Session; token: string }> {
     const { token, tokenHash } = generateSessionToken();
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
@@ -367,5 +364,105 @@ export class AuthService {
       [userId]
     );
     return result.rowCount;
+  }
+
+  // ===========================================
+  // USER PROFILE MANAGEMENT
+  // ===========================================
+
+  async updateProfile(
+    userId: string,
+    updates: {
+      name?: string;
+      bio?: string;
+      company?: string;
+      location?: string;
+      website?: string;
+    }
+  ): Promise<User | null> {
+    const fields: string[] = [];
+    const params: unknown[] = [];
+    let idx = 1;
+
+    for (const [key, value] of Object.entries(updates)) {
+      if (value !== undefined) {
+        fields.push(`${key} = $${idx++}`);
+        params.push(value);
+      }
+    }
+
+    if (fields.length === 0) return this.getUserById(userId);
+
+    params.push(userId);
+    await this.db.execute(`UPDATE users SET ${fields.join(", ")} WHERE id = $${idx}`, params);
+
+    return this.getUserById(userId);
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<boolean> {
+    const user = await this.db.queryOne<{ password_hash: string }>(
+      "SELECT password_hash FROM users WHERE id = $1 AND deleted_at IS NULL",
+      [userId]
+    );
+
+    if (!user) return false;
+
+    const valid = await verifyPassword(currentPassword, user.password_hash);
+    if (!valid) return false;
+
+    const newHash = await hashPassword(newPassword);
+    await this.db.execute("UPDATE users SET password_hash = $1 WHERE id = $2", [newHash, userId]);
+
+    return true;
+  }
+
+  async changeUsername(
+    userId: string,
+    newUsername: string
+  ): Promise<{ success: boolean; error?: string }> {
+    // Validate username format
+    if (!/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(newUsername)) {
+      return {
+        success: false,
+        error: "Username must be 3-40 chars, alphanumeric and hyphens only",
+      };
+    }
+
+    // Check uniqueness
+    const existing = await this.db.queryOne<{ id: string }>(
+      "SELECT id FROM users WHERE username = $1 AND id != $2 AND deleted_at IS NULL",
+      [newUsername, userId]
+    );
+
+    if (existing) {
+      return { success: false, error: "Username already taken" };
+    }
+
+    await this.db.execute("UPDATE users SET username = $1 WHERE id = $2", [newUsername, userId]);
+
+    return { success: true };
+  }
+
+  async getUserByUsername(username: string): Promise<User | null> {
+    return this.db.queryOne<User>(
+      "SELECT id, email, name, username, avatar_url, bio, company, location, website, created_at FROM users WHERE username = $1 AND deleted_at IS NULL",
+      [username]
+    );
+  }
+
+  async deleteUser(userId: string): Promise<boolean> {
+    // Soft delete
+    const result = await this.db.execute(
+      "UPDATE users SET deleted_at = NOW(), email = email || '-deleted-' || id WHERE id = $1 AND deleted_at IS NULL",
+      [userId]
+    );
+    // Revoke all sessions and API keys
+    await this.db.execute("UPDATE sessions SET revoked_at = NOW() WHERE user_id = $1", [userId]);
+    await this.db.execute("UPDATE api_keys SET revoked_at = NOW() WHERE user_id = $1", [userId]);
+    return result.rowCount > 0;
   }
 }

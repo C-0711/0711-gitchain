@@ -3,11 +3,13 @@
  */
 
 export interface C2PAConfig {
-  /** Signing certificate */
-  certificate: {
+  /** Signing certificate (legacy, unused in HMAC mode) */
+  certificate?: {
     path: string;
     password?: string;
   };
+  /** HMAC signing key (hex string). Falls back to C2PA_SIGNING_KEY env var. */
+  signingKey?: string;
   /** Signer identity */
   signer: {
     name: string;
@@ -15,6 +17,8 @@ export interface C2PAConfig {
   };
   /** Claim generator */
   claimGenerator: string;
+  /** Maximum age in milliseconds for timestamp validity (default: 365 days) */
+  maxTimestampAge?: number;
 }
 
 export interface C2PAManifest {
@@ -63,11 +67,28 @@ export interface C2PAAction {
   parameters?: Record<string, unknown>;
 }
 
+/**
+ * Envelope wrapping a manifest with its HMAC signature.
+ * This is what gets serialized for storage/transmission.
+ */
+export interface SignedManifestEnvelope {
+  /** Version of the envelope format */
+  version: 1;
+  /** The manifest content */
+  manifest: C2PAManifest;
+  /** HMAC-SHA256 signature of the canonical manifest JSON (hex) */
+  hmacSignature: string;
+  /** SHA-256 hash of the signing key used (hex, for key identification) */
+  keyFingerprint: string;
+}
+
 export interface SignatureResult {
   success: boolean;
   manifest: C2PAManifest;
   signedData: Buffer;
+  envelope: SignedManifestEnvelope;
   error?: string;
+  warnings?: string[];
 }
 
 export interface VerificationResult {
@@ -76,4 +97,34 @@ export interface VerificationResult {
   certificateChain?: string[];
   errors?: string[];
   warnings?: string[];
+}
+
+/**
+ * Serialize a SignedManifestEnvelope to JSON string
+ */
+export function serializeEnvelope(envelope: SignedManifestEnvelope): string {
+  return JSON.stringify(envelope);
+}
+
+/**
+ * Deserialize a JSON string to SignedManifestEnvelope
+ * Returns null if the JSON is invalid or doesn't match the expected shape.
+ */
+export function deserializeEnvelope(json: string): SignedManifestEnvelope | null {
+  try {
+    const parsed = JSON.parse(json);
+    if (
+      parsed &&
+      parsed.version === 1 &&
+      typeof parsed.hmacSignature === "string" &&
+      typeof parsed.keyFingerprint === "string" &&
+      parsed.manifest &&
+      typeof parsed.manifest.claimId === "string"
+    ) {
+      return parsed as SignedManifestEnvelope;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }

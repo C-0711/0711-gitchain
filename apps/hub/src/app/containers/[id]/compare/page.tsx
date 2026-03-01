@@ -1,8 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import Link from "next/link";
+import { useParams, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
+
+import AppShell, { PageHeader, Card, theme as t } from "@/components/AppShell";
+
+const mono = "'SFMono-Regular','Consolas','Liberation Mono','Menlo',monospace";
 
 interface DiffStats {
   additions: number;
@@ -15,11 +19,11 @@ interface DiffStats {
 interface DiffItem {
   field: string;
   name: string | null;
-  value?: any;
+  value?: unknown;
   unit?: string | null;
   trust?: string;
-  from?: { value: any; unit: string | null; trust: string };
-  to?: { value: any; unit: string | null; trust: string };
+  from?: { value: unknown; unit: string | null; trust: string };
+  to?: { value: unknown; unit: string | null; trust: string };
 }
 
 interface DiffData {
@@ -42,277 +46,614 @@ interface Layer {
   createdAt: string;
 }
 
-export default function ComparePage({ params }: { params: { id: string } }) {
+// Icons
+const Ic = {
+  Diff: () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M8.75 1.75V5H12a.75.75 0 0 1 0 1.5H8.75v3.25a.75.75 0 0 1-1.5 0V6.5H4a.75.75 0 0 1 0-1.5h3.25V1.75a.75.75 0 0 1 1.5 0ZM4 13h8a.75.75 0 0 1 0 1.5H4a.75.75 0 0 1 0-1.5Z" />
+    </svg>
+  ),
+  Back: () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M7.78 12.53a.75.75 0 0 1-1.06 0L2.47 8.28a.75.75 0 0 1 0-1.06l4.25-4.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042L4.81 7h7.44a.75.75 0 0 1 0 1.5H4.81l2.97 2.97a.75.75 0 0 1 0 1.06Z" />
+    </svg>
+  ),
+  Swap: () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M5.22 14.78a.75.75 0 0 0 1.06-1.06L4.56 12h8.69a.75.75 0 0 0 0-1.5H4.56l1.72-1.72a.75.75 0 0 0-1.06-1.06l-3 3a.75.75 0 0 0 0 1.06l3 3Zm5.56-6.56a.75.75 0 1 0 1.06-1.06l1.72-1.72H4.75a.75.75 0 0 1 0-1.5h8.69l-1.72-1.72a.75.75 0 0 1 1.06-1.06l3 3a.75.75 0 0 1 0 1.06l-3 3Z" />
+    </svg>
+  ),
+};
+
+const selectStyle: React.CSSProperties = {
+  padding: "6px 12px",
+  fontSize: 13,
+  fontFamily: mono,
+  color: t.fg,
+  backgroundColor: "#fff",
+  border: `1px solid ${t.border}`,
+  borderRadius: 6,
+  cursor: "pointer",
+  minWidth: 220,
+  outline: "none",
+};
+
+export default function ComparePage() {
+  const params = useParams();
   const searchParams = useSearchParams();
+  const id = params.id as string;
+  const containerId = decodeURIComponent(id);
+
   const [layers, setLayers] = useState<Layer[]>([]);
   const [diffData, setDiffData] = useState<DiffData | null>(null);
   const [loading, setLoading] = useState(true);
   const [diffLoading, setDiffLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  const [fromLayer, setFromLayer] = useState(searchParams.get('from') || '');
-  const [toLayer, setToLayer] = useState(searchParams.get('to') || '');
 
-  const containerId = decodeURIComponent(params.id);
+  const [fromLayer, setFromLayer] = useState(searchParams.get("from") || "");
+  const [toLayer, setToLayer] = useState(searchParams.get("to") || "");
 
+  // Fetch available versions/layers
   useEffect(() => {
-    fetchLayers();
+    const token = localStorage.getItem("token");
+    fetch(`/api/containers/${encodeURIComponent(containerId)}/versions`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error(`Failed to load versions (${r.status})`);
+        return r.json();
+      })
+      .then((data) => {
+        const l = data.layers || [];
+        setLayers(l);
+        // Auto-select first two if available and none selected
+        if (l.length >= 2 && !fromLayer && !toLayer) {
+          setFromLayer(l[1]?.id || "");
+          setToLayer(l[0]?.id || "");
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message);
+        setLoading(false);
+      });
   }, [containerId]);
 
+  // Fetch diff when layers change
   useEffect(() => {
-    if (fromLayer && toLayer && fromLayer !== toLayer) {
-      fetchDiff();
+    if (!fromLayer || !toLayer || fromLayer === toLayer) {
+      setDiffData(null);
+      return;
     }
-  }, [fromLayer, toLayer]);
 
-  const fetchLayers = async () => {
-    try {
-      const res = await fetch(`/api/containers/${encodeURIComponent(containerId)}/versions`);
-      if (!res.ok) throw new Error('Failed to fetch versions');
-      const data = await res.json();
-      setLayers(data.layers || []);
-      
-      // Auto-select first two layers if available
-      if (data.layers?.length >= 2 && !fromLayer && !toLayer) {
-        setFromLayer(data.layers[1]?.id || '');
-        setToLayer(data.layers[0]?.id || '');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchDiff = async () => {
     setDiffLoading(true);
-    try {
-      const res = await fetch(
-        `/api/containers/${encodeURIComponent(containerId)}/diff?from=${encodeURIComponent(fromLayer)}&to=${encodeURIComponent(toLayer)}`
-      );
-      if (!res.ok) throw new Error('Failed to calculate diff');
-      const data = await res.json();
-      setDiffData(data);
-    } catch (err) {
-      console.error('Diff error:', err);
-    } finally {
-      setDiffLoading(false);
-    }
+    const token = localStorage.getItem("token");
+    fetch(
+      `/api/containers/${encodeURIComponent(containerId)}/diff?from=${encodeURIComponent(fromLayer)}&to=${encodeURIComponent(toLayer)}`,
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+    )
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to calculate diff");
+        return r.json();
+      })
+      .then((data) => {
+        setDiffData(data);
+        setDiffLoading(false);
+      })
+      .catch(() => {
+        setDiffData(null);
+        setDiffLoading(false);
+      });
+  }, [containerId, fromLayer, toLayer]);
+
+  const handleSwap = () => {
+    const tmp = fromLayer;
+    setFromLayer(toLayer);
+    setToLayer(tmp);
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="animate-pulse text-gray-600">Loading...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-400 mb-4">{error}</p>
-          <Link href={`/containers/${encodeURIComponent(containerId)}`} className="text-emerald-600 hover:underline">
-            Back to container
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-gray-100 text-[#c9d1d9]">
-      {/* Header */}
-      <div className="border-b border-[#21262d]">
-        <div className="max-w-[1280px] mx-auto px-6 py-4">
-          <div className="flex items-center gap-2 text-sm text-[#8b949e] mb-4">
-            <Link href={`/containers/${encodeURIComponent(containerId)}`} className="hover:text-gray-900">
-              {containerId}
-            </Link>
-            <span>/</span>
-            <span className="text-gray-900">Compare</span>
-          </div>
-
-          <h1 className="text-xl font-semibold mb-4">Compare Layers</h1>
-
-          {/* Layer selectors */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-[#8b949e]">Base:</span>
-              <select
-                value={fromLayer}
-                onChange={(e) => setFromLayer(e.target.value)}
-                className="bg-[#21262d] border border-[#30363d] rounded-md px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none"
-              >
-                <option value="">Select layer...</option>
-                {layers.map(layer => (
-                  <option key={layer.id} value={layer.id}>
-                    {layer.id}: {layer.name} ({layer.atomCount} atoms)
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <span className="text-2xl text-[#484f58]">→</span>
-
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-[#8b949e]">Compare:</span>
-              <select
-                value={toLayer}
-                onChange={(e) => setToLayer(e.target.value)}
-                className="bg-[#21262d] border border-[#30363d] rounded-md px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none"
-              >
-                <option value="">Select layer...</option>
-                {layers.map(layer => (
-                  <option key={layer.id} value={layer.id} disabled={layer.id === fromLayer}>
-                    {layer.id}: {layer.name} ({layer.atomCount} atoms)
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {fromLayer && toLayer && fromLayer !== toLayer && (
-              <button
-                onClick={() => { const tmp = fromLayer; setFromLayer(toLayer); setToLayer(tmp); }}
-                className="p-2 text-[#8b949e] hover:text-gray-900 hover:bg-[#21262d] rounded-md transition"
-                title="Swap"
-              >
-                ⇄
-              </button>
-            )}
-          </div>
+    <AppShell>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 24px" }}>
+        {/* Breadcrumb */}
+        <div
+          style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, fontSize: 14 }}
+        >
+          <Link
+            href={`/containers/${encodeURIComponent(containerId)}`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              color: t.link,
+              textDecoration: "none",
+            }}
+          >
+            <Ic.Back /> {containerId}
+          </Link>
+          <span style={{ color: t.fgMuted }}>/</span>
+          <span style={{ color: t.fg, fontWeight: 600 }}>Compare</span>
         </div>
-      </div>
 
-      {/* Diff content */}
-      <div className="max-w-[1280px] mx-auto px-6 py-6">
-        {diffLoading ? (
-          <div className="text-center py-12">
-            <div className="animate-pulse text-gray-600">Calculating diff...</div>
-          </div>
-        ) : !diffData ? (
-          <div className="text-center py-12 border border-[#30363d] rounded-lg">
-            <div className="text-4xl mb-3">🔍</div>
-            <p className="text-[#8b949e]">Select two layers to compare</p>
-          </div>
-        ) : (
-          <>
-            {/* Stats bar */}
-            <div className="flex items-center gap-6 mb-6 p-4 bg-gray-100 border border-[#30363d] rounded-lg">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-green-500"></span>
-                <span className="text-green-400 font-medium">+{diffData.stats.additions}</span>
-                <span className="text-[#8b949e] text-sm">additions</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-red-500"></span>
-                <span className="text-red-400 font-medium">-{diffData.stats.deletions}</span>
-                <span className="text-[#8b949e] text-sm">deletions</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
-                <span className="text-yellow-400 font-medium">~{diffData.stats.modifications}</span>
-                <span className="text-[#8b949e] text-sm">modifications</span>
-              </div>
-              <div className="ml-auto text-sm text-[#484f58]">
-                {diffData.stats.unchanged} unchanged
-              </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
+          <span style={{ color: t.fgMuted }}>
+            <Ic.Diff />
+          </span>
+          <PageHeader
+            title="Compare Layers"
+            description="Compare two versions of this container to see what changed"
+          />
+        </div>
+
+        {/* Loading State */}
+        {loading && (
+          <Card>
+            <div style={{ textAlign: "center", padding: 48, color: t.fgMuted, fontSize: 14 }}>
+              Loading versions...
             </div>
+          </Card>
+        )}
 
-            {/* Additions */}
-            {diffData.diff.additions.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-green-400 mb-2 flex items-center gap-2">
-                  <span>+</span> Additions ({diffData.diff.additions.length})
-                </h3>
-                <div className="border border-green-900/50 rounded-lg overflow-hidden">
-                  {diffData.diff.additions.map((item, i) => (
-                    <div key={i} className="px-4 py-2 border-b border-green-900/30 last:border-0 bg-green-900/10">
-                      <div className="flex items-center gap-3">
-                        <code className="text-green-400 text-sm">+ {item.name || item.field}</code>
-                        <span className="text-[#484f58]">=</span>
-                        <code className="text-gray-900 text-sm">{JSON.stringify(item.value)}</code>
-                        {item.unit && <span className="text-[#8b949e] text-xs">{item.unit}</span>}
-                      </div>
-                    </div>
-                  ))}
+        {/* Error State */}
+        {error && (
+          <Card>
+            <div style={{ textAlign: "center", padding: 48 }}>
+              <div style={{ fontSize: 14, color: "#cf222e", marginBottom: 12 }}>{error}</div>
+              <Link
+                href={`/containers/${encodeURIComponent(containerId)}`}
+                style={{ fontSize: 14, color: t.link, textDecoration: "none" }}
+              >
+                Back to container
+              </Link>
+            </div>
+          </Card>
+        )}
+
+        {/* Layer Selectors */}
+        {!loading && !error && (
+          <>
+            <Card>
+              <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+                {/* Base selector */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: t.fg }}>Base:</span>
+                  <select
+                    value={fromLayer}
+                    onChange={(e) => setFromLayer(e.target.value)}
+                    style={selectStyle}
+                  >
+                    <option value="">Select layer...</option>
+                    {layers.map((layer) => (
+                      <option key={layer.id} value={layer.id}>
+                        {layer.id}: {layer.name} ({layer.atomCount} atoms)
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
+                {/* Arrow / swap */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 20, color: t.fgMuted }}>...</span>
+                  {fromLayer && toLayer && fromLayer !== toLayer && (
+                    <button
+                      onClick={handleSwap}
+                      title="Swap base and compare"
+                      style={{
+                        padding: "4px 8px",
+                        backgroundColor: "#fff",
+                        border: `1px solid ${t.border}`,
+                        borderRadius: 6,
+                        color: t.fgMuted,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Ic.Swap />
+                    </button>
+                  )}
+                </div>
+
+                {/* Compare selector */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: t.fg }}>Compare:</span>
+                  <select
+                    value={toLayer}
+                    onChange={(e) => setToLayer(e.target.value)}
+                    style={selectStyle}
+                  >
+                    <option value="">Select layer...</option>
+                    {layers.map((layer) => (
+                      <option key={layer.id} value={layer.id} disabled={layer.id === fromLayer}>
+                        {layer.id}: {layer.name} ({layer.atomCount} atoms)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </Card>
+
+            {/* Diff Loading */}
+            {diffLoading && (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: 48,
+                  color: t.fgMuted,
+                  fontSize: 14,
+                  marginTop: 24,
+                }}
+              >
+                Calculating diff...
               </div>
             )}
 
-            {/* Deletions */}
-            {diffData.diff.deletions.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-red-400 mb-2 flex items-center gap-2">
-                  <span>-</span> Deletions ({diffData.diff.deletions.length})
-                </h3>
-                <div className="border border-red-900/50 rounded-lg overflow-hidden">
-                  {diffData.diff.deletions.map((item, i) => (
-                    <div key={i} className="px-4 py-2 border-b border-red-900/30 last:border-0 bg-red-100/10">
-                      <div className="flex items-center gap-3">
-                        <code className="text-red-400 text-sm">- {item.name || item.field}</code>
-                        <span className="text-[#484f58]">=</span>
-                        <code className="text-[#8b949e] text-sm line-through">{JSON.stringify(item.value)}</code>
-                        {item.unit && <span className="text-[#8b949e] text-xs">{item.unit}</span>}
-                      </div>
-                    </div>
-                  ))}
+            {/* No selection prompt */}
+            {!diffLoading && !diffData && (!fromLayer || !toLayer || fromLayer === toLayer) && (
+              <Card>
+                <div style={{ textAlign: "center", padding: 48, marginTop: 0 }}>
+                  <div style={{ color: t.fgMuted, marginBottom: 12 }}>
+                    <svg width="48" height="48" viewBox="0 0 16 16" fill={t.fgMuted}>
+                      <path d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-1.06 1.06ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z" />
+                    </svg>
+                  </div>
+                  <h3 style={{ fontSize: 16, fontWeight: 600, color: t.fg, margin: "0 0 8px" }}>
+                    Select two different layers to compare
+                  </h3>
+                  <p style={{ fontSize: 14, color: t.fgMuted }}>
+                    Choose a base and compare layer to see the differences.
+                  </p>
                 </div>
-              </div>
+              </Card>
             )}
 
-            {/* Modifications */}
-            {diffData.diff.modifications.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-yellow-400 mb-2 flex items-center gap-2">
-                  <span>~</span> Modifications ({diffData.diff.modifications.length})
-                </h3>
-                <div className="border border-yellow-900/50 rounded-lg overflow-hidden">
-                  {diffData.diff.modifications.map((item, i) => (
-                    <div key={i} className="px-4 py-3 border-b border-yellow-900/30 last:border-0 bg-yellow-900/10">
-                      <div className="font-medium text-sm mb-2">{item.name || item.field}</div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-red-100/20 rounded px-3 py-2">
-                          <div className="text-xs text-red-400 mb-1">Before</div>
-                          <code className="text-sm text-red-300">{JSON.stringify(item.from?.value)}</code>
-                          {item.from?.unit && <span className="text-xs text-[#8b949e] ml-1">{item.from.unit}</span>}
+            {/* Diff Results */}
+            {!diffLoading && diffData && (
+              <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+                {/* Stats bar */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 24,
+                    padding: "14px 20px",
+                    backgroundColor: "#fff",
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 8,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        backgroundColor: "#1a7f37",
+                        display: "inline-block",
+                      }}
+                    />
+                    <span style={{ fontWeight: 600, color: "#1a7f37" }}>
+                      +{diffData.stats.additions}
+                    </span>
+                    <span style={{ fontSize: 13, color: t.fgMuted }}>additions</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        backgroundColor: "#cf222e",
+                        display: "inline-block",
+                      }}
+                    />
+                    <span style={{ fontWeight: 600, color: "#cf222e" }}>
+                      -{diffData.stats.deletions}
+                    </span>
+                    <span style={{ fontSize: 13, color: t.fgMuted }}>deletions</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        backgroundColor: "#9a6700",
+                        display: "inline-block",
+                      }}
+                    />
+                    <span style={{ fontWeight: 600, color: "#9a6700" }}>
+                      ~{diffData.stats.modifications}
+                    </span>
+                    <span style={{ fontSize: 13, color: t.fgMuted }}>modifications</span>
+                  </div>
+                  <span style={{ marginLeft: "auto", fontSize: 13, color: t.fgMuted }}>
+                    {diffData.stats.unchanged} unchanged
+                  </span>
+                </div>
+
+                {/* Additions */}
+                {diffData.diff.additions.length > 0 && (
+                  <div>
+                    <h3
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 600,
+                        color: "#1a7f37",
+                        marginBottom: 8,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <span>+</span> Additions ({diffData.diff.additions.length})
+                    </h3>
+                    <div
+                      style={{
+                        border: "1px solid #aceebb",
+                        borderRadius: 8,
+                        overflow: "hidden",
+                      }}
+                    >
+                      {diffData.diff.additions.map((item, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            padding: "8px 16px",
+                            backgroundColor: "#dafbe1",
+                            borderBottom:
+                              i < diffData.diff.additions.length - 1 ? "1px solid #aceebb" : "none",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                          }}
+                        >
+                          <code
+                            style={{
+                              fontFamily: mono,
+                              fontSize: 13,
+                              color: "#1a7f37",
+                              fontWeight: 600,
+                            }}
+                          >
+                            + {item.name || item.field}
+                          </code>
+                          <span style={{ color: t.fgMuted }}>=</span>
+                          <code style={{ fontFamily: mono, fontSize: 13, color: t.fg }}>
+                            {JSON.stringify(item.value)}
+                          </code>
+                          {item.unit && (
+                            <span style={{ fontSize: 12, color: t.fgMuted }}>{item.unit}</span>
+                          )}
                         </div>
-                        <div className="bg-green-900/20 rounded px-3 py-2">
-                          <div className="text-xs text-green-400 mb-1">After</div>
-                          <code className="text-sm text-green-300">{JSON.stringify(item.to?.value)}</code>
-                          {item.to?.unit && <span className="text-xs text-[#8b949e] ml-1">{item.to.unit}</span>}
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                  </div>
+                )}
 
-            {/* No changes */}
-            {diffData.stats.additions === 0 && diffData.stats.deletions === 0 && diffData.stats.modifications === 0 && (
-              <div className="text-center py-12 border border-[#30363d] rounded-lg">
-                <div className="text-4xl mb-3">✓</div>
-                <p className="text-[#8b949e]">No differences between these layers</p>
+                {/* Deletions */}
+                {diffData.diff.deletions.length > 0 && (
+                  <div>
+                    <h3
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 600,
+                        color: "#cf222e",
+                        marginBottom: 8,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <span>-</span> Deletions ({diffData.diff.deletions.length})
+                    </h3>
+                    <div
+                      style={{
+                        border: "1px solid #ff818266",
+                        borderRadius: 8,
+                        overflow: "hidden",
+                      }}
+                    >
+                      {diffData.diff.deletions.map((item, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            padding: "8px 16px",
+                            backgroundColor: "#ffebe9",
+                            borderBottom:
+                              i < diffData.diff.deletions.length - 1
+                                ? "1px solid #ff818266"
+                                : "none",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                          }}
+                        >
+                          <code
+                            style={{
+                              fontFamily: mono,
+                              fontSize: 13,
+                              color: "#cf222e",
+                              fontWeight: 600,
+                            }}
+                          >
+                            - {item.name || item.field}
+                          </code>
+                          <span style={{ color: t.fgMuted }}>=</span>
+                          <code
+                            style={{
+                              fontFamily: mono,
+                              fontSize: 13,
+                              color: t.fgMuted,
+                              textDecoration: "line-through",
+                            }}
+                          >
+                            {JSON.stringify(item.value)}
+                          </code>
+                          {item.unit && (
+                            <span style={{ fontSize: 12, color: t.fgMuted }}>{item.unit}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Modifications */}
+                {diffData.diff.modifications.length > 0 && (
+                  <div>
+                    <h3
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 600,
+                        color: "#9a6700",
+                        marginBottom: 8,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <span>~</span> Modifications ({diffData.diff.modifications.length})
+                    </h3>
+                    <div
+                      style={{
+                        border: "1px solid #d4a72c66",
+                        borderRadius: 8,
+                        overflow: "hidden",
+                      }}
+                    >
+                      {diffData.diff.modifications.map((item, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            padding: "12px 16px",
+                            backgroundColor: "#fff8c5",
+                            borderBottom:
+                              i < diffData.diff.modifications.length - 1
+                                ? "1px solid #d4a72c66"
+                                : "none",
+                          }}
+                        >
+                          <div
+                            style={{ fontWeight: 600, fontSize: 13, color: t.fg, marginBottom: 8 }}
+                          >
+                            {item.name || item.field}
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                            {/* Before */}
+                            <div
+                              style={{
+                                padding: "8px 12px",
+                                backgroundColor: "#ffebe9",
+                                borderRadius: 6,
+                                border: "1px solid #ff818266",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  color: "#cf222e",
+                                  marginBottom: 4,
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.05em",
+                                }}
+                              >
+                                Before
+                              </div>
+                              <code style={{ fontFamily: mono, fontSize: 13, color: "#82071e" }}>
+                                {JSON.stringify(item.from?.value)}
+                              </code>
+                              {item.from?.unit && (
+                                <span style={{ fontSize: 12, color: t.fgMuted, marginLeft: 4 }}>
+                                  {item.from.unit}
+                                </span>
+                              )}
+                            </div>
+                            {/* After */}
+                            <div
+                              style={{
+                                padding: "8px 12px",
+                                backgroundColor: "#dafbe1",
+                                borderRadius: 6,
+                                border: "1px solid #aceebb",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  color: "#1a7f37",
+                                  marginBottom: 4,
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.05em",
+                                }}
+                              >
+                                After
+                              </div>
+                              <code style={{ fontFamily: mono, fontSize: 13, color: "#116329" }}>
+                                {JSON.stringify(item.to?.value)}
+                              </code>
+                              {item.to?.unit && (
+                                <span style={{ fontSize: 12, color: t.fgMuted, marginLeft: 4 }}>
+                                  {item.to.unit}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* No differences */}
+                {diffData.stats.additions === 0 &&
+                  diffData.stats.deletions === 0 &&
+                  diffData.stats.modifications === 0 && (
+                    <Card>
+                      <div style={{ textAlign: "center", padding: 48 }}>
+                        <div style={{ color: "#1a7f37", marginBottom: 12 }}>
+                          <svg width="32" height="32" viewBox="0 0 16 16" fill="#1a7f37">
+                            <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z" />
+                          </svg>
+                        </div>
+                        <h3
+                          style={{ fontSize: 16, fontWeight: 600, color: t.fg, margin: "0 0 8px" }}
+                        >
+                          No differences
+                        </h3>
+                        <p style={{ fontSize: 14, color: t.fgMuted }}>
+                          These two layers are identical.
+                        </p>
+                      </div>
+                    </Card>
+                  )}
               </div>
             )}
           </>
         )}
 
         {/* Back link */}
-        <div className="mt-6">
-          <Link
-            href={`/containers/${encodeURIComponent(containerId)}`}
-            className="text-sm text-[#8b949e] hover:text-gray-900 transition flex items-center gap-1"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to container
-          </Link>
-        </div>
+        {!loading && (
+          <div style={{ marginTop: 24 }}>
+            <Link
+              href={`/containers/${encodeURIComponent(containerId)}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 14,
+                color: t.fgMuted,
+                textDecoration: "none",
+              }}
+            >
+              <Ic.Back /> Back to container
+            </Link>
+          </div>
+        )}
       </div>
-    </div>
+    </AppShell>
   );
 }

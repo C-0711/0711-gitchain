@@ -1,7 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useState, useEffect } from "react";
+
+import AppShell, { PageHeader, Card, theme as t } from "@/components/AppShell";
+
+const mono = "'SFMono-Regular','Consolas','Liberation Mono','Menlo',monospace";
 
 interface Commit {
   id: string;
@@ -23,221 +28,488 @@ interface Commit {
   };
 }
 
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function relativeTime(dateStr: string): string {
+  const ms = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+}
+
 const trustColors: Record<string, string> = {
-  highest: 'bg-green-400',
-  high: 'bg-blue-400',
-  certified: 'bg-indigo-400',
-  verified: 'bg-cyan-400',
-  medium: 'bg-yellow-400',
-  customer: 'bg-purple-400',
-  generated: 'bg-orange-400',
-  community: 'bg-gray-400',
+  highest: "#4ade80",
+  high: "#60a5fa",
+  certified: "#818cf8",
+  verified: "#22d3ee",
+  medium: "#facc15",
+  customer: "#a78bfa",
+  generated: "#fb923c",
+  community: "#9ca3af",
 };
 
-export default function HistoryPage({ params }: { params: { id: string } }) {
+// Icons
+const Ic = {
+  Clock: () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 0 1-.557 1.392l-2.5-1A.751.751 0 0 1 7 8.25v-3.5a.75.75 0 0 1 1.5 0Z" />
+    </svg>
+  ),
+  Commit: () => (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M11.93 8.5a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 0 1 0-1.5h3.32a4.002 4.002 0 0 1 7.86 0h3.32a.75.75 0 0 1 0 1.5Z" />
+    </svg>
+  ),
+  Back: () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M7.78 12.53a.75.75 0 0 1-1.06 0L2.47 8.28a.75.75 0 0 1 0-1.06l4.25-4.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042L4.81 7h7.44a.75.75 0 0 1 0 1.5H4.81l2.97 2.97a.75.75 0 0 1 0 1.06Z" />
+    </svg>
+  ),
+  Chain: () => (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    </svg>
+  ),
+  Shield: ({ s = 12 }: { s?: number }) => (
+    <svg width={s} height={s} viewBox="0 0 16 16" fill="currentColor">
+      <path d="M7.467.133a1.748 1.748 0 0 1 1.066 0l5.25 1.68A1.75 1.75 0 0 1 15 3.48V7c0 1.566-.32 3.182-1.303 4.682-.983 1.498-2.585 2.813-5.032 3.855a1.697 1.697 0 0 1-1.33 0c-2.447-1.042-4.049-2.357-5.032-3.855C1.32 10.182 1 8.566 1 7V3.48a1.75 1.75 0 0 1 1.217-1.667Z" />
+    </svg>
+  ),
+};
+
+export default function HistoryPage() {
+  const params = useParams();
+  const id = params.id as string;
+  const containerId = decodeURIComponent(id);
+
   const [commits, setCommits] = useState<Commit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [source, setSource] = useState<string>('');
-
-  const containerId = decodeURIComponent(params.id);
+  const [source, setSource] = useState<string>("");
 
   useEffect(() => {
-    fetchCommits();
+    const token = localStorage.getItem("token");
+    fetch(`/api/containers/${encodeURIComponent(containerId)}/commits`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error(`Failed to load commits (${r.status})`);
+        return r.json();
+      })
+      .then((data) => {
+        setCommits(data.commits || []);
+        setSource(data.source || "");
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message);
+        setLoading(false);
+      });
   }, [containerId]);
 
-  const fetchCommits = async () => {
-    try {
-      const res = await fetch(`/api/containers/${encodeURIComponent(containerId)}/commits`);
-      if (!res.ok) throw new Error('Failed to fetch commits');
-      const data = await res.json();
-      setCommits(data.commits || []);
-      setSource(data.source || '');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const shortHash = (hash: string) => hash?.substring(0, 7) || '';
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100">
-        <div className="max-w-[1280px] mx-auto px-6 py-8">
-          <div className="animate-pulse space-y-4">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-24 bg-gray-50 rounded"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-400 mb-4">{error}</p>
-          <Link href={`/containers/${encodeURIComponent(containerId)}`} className="text-emerald-600 hover:underline">
-            Back to container
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  const shortHash = (hash: string) => hash?.substring(0, 7) || "";
 
   return (
-    <div className="min-h-screen bg-gray-100 text-[#c9d1d9]">
-      {/* Header */}
-      <div className="border-b border-[#21262d]">
-        <div className="max-w-[1280px] mx-auto px-6 py-4">
-          <div className="flex items-center gap-2 text-sm text-[#8b949e]">
-            <Link href={`/containers/${encodeURIComponent(containerId)}`} className="hover:text-gray-900">
-              {containerId}
-            </Link>
-            <span>/</span>
-            <span className="text-gray-900">History</span>
-          </div>
+    <AppShell>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 24px" }}>
+        {/* Breadcrumb */}
+        <div
+          style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, fontSize: 14 }}
+        >
+          <Link
+            href={`/containers/${encodeURIComponent(containerId)}`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              color: t.link,
+              textDecoration: "none",
+            }}
+          >
+            <Ic.Back /> {containerId}
+          </Link>
+          <span style={{ color: t.fgMuted }}>/</span>
+          <span style={{ color: t.fg, fontWeight: 600 }}>History</span>
         </div>
-      </div>
 
-      <div className="max-w-[1280px] mx-auto px-6 py-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-semibold flex items-center gap-2">
-            <svg className="w-5 h-5 text-[#8b949e]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Commit History
-            <span className="text-sm font-normal text-[#8b949e] ml-2">
-              {commits.length} commits
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 24,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ color: t.fgMuted }}>
+              <Ic.Clock />
             </span>
-          </h1>
-          {source === 'layers' && (
-            <span className="text-xs text-[#8b949e] bg-[#21262d] px-2 py-1 rounded">
+            <PageHeader
+              title="Commit History"
+              description={`${loading ? "Loading" : commits.length} commit${commits.length !== 1 ? "s" : ""} in this container`}
+            />
+          </div>
+          {source === "layers" && (
+            <span
+              style={{
+                fontSize: 12,
+                color: t.fgMuted,
+                backgroundColor: t.canvas,
+                border: `1px solid ${t.border}`,
+                padding: "3px 10px",
+                borderRadius: 12,
+              }}
+            >
               Generated from layers
             </span>
           )}
         </div>
 
-        {commits.length === 0 ? (
-          <div className="border border-[#30363d] rounded-lg p-12 text-center">
-            <div className="text-4xl mb-3">📜</div>
-            <p className="text-[#8b949e]">No commits yet</p>
-          </div>
-        ) : (
-          <div className="border border-[#30363d] rounded-lg divide-y divide-[#21262d]">
-            {commits.map((commit, idx) => (
-              <div key={commit.id} className="px-4 py-4 hover:bg-gray-100 transition">
-                <div className="flex items-start gap-4">
-                  {/* Timeline dot */}
-                  <div className="flex flex-col items-center">
-                    <div className={`w-3 h-3 rounded-full ${
-                      commit.isAnchored ? 'bg-emerald-400' : 
-                      commit.layerInfo ? trustColors[commit.layerInfo.trustLevel] || 'bg-gray-400' :
-                      'bg-blue-400'
-                    }`}></div>
-                    {idx < commits.length - 1 && (
-                      <div className="w-0.5 h-full bg-[#30363d] mt-2"></div>
-                    )}
-                  </div>
+        {/* Loading State */}
+        {loading && (
+          <Card>
+            <div style={{ textAlign: "center", padding: 48, color: t.fgMuted, fontSize: 14 }}>
+              Loading commit history...
+            </div>
+          </Card>
+        )}
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-medium text-gray-900">{commit.message}</p>
-                        <div className="flex items-center gap-3 mt-1 text-sm text-[#8b949e]">
-                          <div className="flex items-center gap-1">
-                            <div className="w-4 h-4 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-full flex items-center justify-center text-[8px] font-bold">
-                              {commit.authorName?.charAt(0).toUpperCase() || '?'}
-                            </div>
-                            <span>{commit.authorName || commit.author}</span>
-                          </div>
-                          <span>·</span>
-                          <span>{formatDate(commit.createdAt)}</span>
-                        </div>
-                      </div>
+        {/* Error State */}
+        {error && (
+          <Card>
+            <div style={{ textAlign: "center", padding: 48 }}>
+              <div style={{ fontSize: 14, color: "#cf222e", marginBottom: 12 }}>{error}</div>
+              <Link
+                href={`/containers/${encodeURIComponent(containerId)}`}
+                style={{ fontSize: 14, color: t.link, textDecoration: "none" }}
+              >
+                Back to container
+              </Link>
+            </div>
+          </Card>
+        )}
 
-                      <div className="flex items-center gap-2">
-                        {/* Anchored badge */}
-                        {commit.isAnchored ? (
-                          <a
-                            href={`https://basescan.org/tx/${commit.txHash}`}
-                            target="_blank"
-                            rel="noopener"
-                            className="flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-600 border border-emerald-300 rounded text-xs hover:bg-emerald-200 transition"
-                          >
-                            <span>⛓️</span>
-                            <span>Block #{commit.blockNumber}</span>
-                          </a>
-                        ) : (
-                          <span className="flex items-center gap-1 px-2 py-1 bg-[#21262d] text-[#8b949e] rounded text-xs">
-                            <span>⏳</span>
-                            <span>Pending</span>
-                          </span>
-                        )}
+        {/* Empty State */}
+        {!loading && !error && commits.length === 0 && (
+          <Card>
+            <div style={{ textAlign: "center", padding: 48 }}>
+              <div style={{ color: t.fgMuted, marginBottom: 12 }}>
+                <Ic.Commit />
+              </div>
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: t.fg, margin: "0 0 8px" }}>
+                No commits yet
+              </h3>
+              <p style={{ fontSize: 14, color: t.fgMuted }}>
+                This container has no commit history.
+              </p>
+            </div>
+          </Card>
+        )}
 
-                        {/* Hash */}
-                        <code className="px-2 py-1 bg-[#21262d] text-[#8b949e] rounded text-xs font-mono">
-                          {shortHash(commit.hash)}
-                        </code>
-                      </div>
+        {/* Timeline */}
+        {!loading && !error && commits.length > 0 && (
+          <div style={{ position: "relative" }}>
+            {/* Vertical timeline line */}
+            <div
+              style={{
+                position: "absolute",
+                left: 19,
+                top: 28,
+                bottom: 28,
+                width: 2,
+                backgroundColor: t.border,
+                zIndex: 0,
+              }}
+            />
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+              {commits.map((commit, idx) => {
+                const dotColor = commit.isAnchored
+                  ? "#1a7f37"
+                  : commit.layerInfo
+                    ? trustColors[commit.layerInfo.trustLevel] || "#9ca3af"
+                    : "#60a5fa";
+
+                return (
+                  <div
+                    key={commit.id || commit.hash}
+                    style={{
+                      display: "flex",
+                      gap: 16,
+                      padding: "14px 0",
+                      position: "relative",
+                    }}
+                  >
+                    {/* Timeline dot */}
+                    <div
+                      style={{
+                        width: 40,
+                        display: "flex",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        zIndex: 1,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: "50%",
+                          backgroundColor: dotColor,
+                          border: "2px solid #fff",
+                          marginTop: 6,
+                        }}
+                      />
                     </div>
 
-                    {/* Layer info */}
-                    {commit.layerInfo && (
-                      <div className="flex items-center gap-3 mt-3 text-xs">
-                        <span className="px-2 py-0.5 bg-[#21262d] rounded text-[#8b949e]">
-                          {commit.layerInfo.type}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <div className={`w-2 h-2 rounded-full ${trustColors[commit.layerInfo.trustLevel] || 'bg-gray-400'}`}></div>
-                          <span className="text-[#8b949e]">{commit.layerInfo.trustLevel}</span>
-                        </span>
-                        <span className="text-[#8b949e]">{commit.layerInfo.atomCount} atoms</span>
-                      </div>
-                    )}
+                    {/* Commit card */}
+                    <div
+                      style={{
+                        flex: 1,
+                        backgroundColor: "#fff",
+                        border: `1px solid ${t.border}`,
+                        borderRadius: 8,
+                        padding: "14px 18px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          justifyContent: "space-between",
+                          gap: 12,
+                        }}
+                      >
+                        <div style={{ flex: 1 }}>
+                          {/* Message */}
+                          <div
+                            style={{
+                              fontSize: 15,
+                              fontWeight: 600,
+                              color: t.fg,
+                              marginBottom: 8,
+                              lineHeight: 1.4,
+                            }}
+                          >
+                            {commit.message}
+                          </div>
 
-                    {/* Parent link */}
-                    {commit.parentHash && (
-                      <div className="mt-2 text-xs text-[#484f58]">
-                        Parent: <code className="font-mono">{shortHash(commit.parentHash)}</code>
+                          {/* Author + date row */}
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 10,
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            {/* Author avatar */}
+                            <div
+                              style={{
+                                width: 20,
+                                height: 20,
+                                borderRadius: "50%",
+                                background: "linear-gradient(135deg, #238636 0%, #0969da 100%)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 9,
+                                fontWeight: 700,
+                                color: "#fff",
+                              }}
+                            >
+                              {(commit.authorName || commit.author || "?").charAt(0).toUpperCase()}
+                            </div>
+                            <span style={{ fontSize: 13, color: t.fgMuted }}>
+                              <strong style={{ color: t.fg, fontWeight: 500 }}>
+                                {commit.authorName || commit.author}
+                              </strong>
+                              {" committed "}
+                              <span
+                                title={formatDate(commit.createdAt)}
+                                style={{ fontFamily: mono, fontSize: 12, color: "#8b949e" }}
+                              >
+                                {relativeTime(commit.createdAt)}
+                              </span>
+                            </span>
+                          </div>
+
+                          {/* Layer info */}
+                          {commit.layerInfo && (
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 10,
+                                marginTop: 10,
+                                fontSize: 12,
+                              }}
+                            >
+                              <span
+                                style={{
+                                  padding: "1px 8px",
+                                  backgroundColor: t.canvas,
+                                  border: `1px solid ${t.border}`,
+                                  borderRadius: 4,
+                                  color: t.fgMuted,
+                                }}
+                              >
+                                {commit.layerInfo.type}
+                              </span>
+                              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                <span
+                                  style={{
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: "50%",
+                                    backgroundColor:
+                                      trustColors[commit.layerInfo.trustLevel] || "#9ca3af",
+                                    display: "inline-block",
+                                  }}
+                                />
+                                <span style={{ color: t.fgMuted }}>
+                                  {commit.layerInfo.trustLevel}
+                                </span>
+                              </span>
+                              <span style={{ color: t.fgMuted }}>
+                                {commit.layerInfo.atomCount} atoms
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Parent hash */}
+                          {commit.parentHash && (
+                            <div style={{ marginTop: 6, fontSize: 12, color: "#8b949e" }}>
+                              Parent:{" "}
+                              <code style={{ fontFamily: mono, fontSize: 11 }}>
+                                {shortHash(commit.parentHash)}
+                              </code>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Right side: hash + anchored badge */}
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "flex-end",
+                            gap: 6,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {/* Hash badge */}
+                          <span
+                            style={{
+                              fontFamily: mono,
+                              fontSize: 12,
+                              color: t.link,
+                              backgroundColor: t.canvas,
+                              border: `1px solid ${t.border}`,
+                              padding: "2px 8px",
+                              borderRadius: 4,
+                              letterSpacing: "0.02em",
+                              userSelect: "all",
+                            }}
+                            title={commit.hash}
+                          >
+                            {shortHash(commit.hash)}
+                          </span>
+
+                          {/* Anchored badge */}
+                          {commit.isAnchored ? (
+                            <a
+                              href={
+                                commit.txHash ? `https://basescan.org/tx/${commit.txHash}` : "#"
+                              }
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 4,
+                                padding: "2px 8px",
+                                fontSize: 11,
+                                fontFamily: mono,
+                                backgroundColor: "#dafbe1",
+                                border: "1px solid #aceebb",
+                                borderRadius: 4,
+                                color: "#1a7f37",
+                                textDecoration: "none",
+                              }}
+                            >
+                              <Ic.Shield s={10} />
+                              Block #{commit.blockNumber}
+                            </a>
+                          ) : (
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 4,
+                                padding: "2px 8px",
+                                fontSize: 11,
+                                fontFamily: mono,
+                                backgroundColor: t.canvas,
+                                border: `1px solid ${t.border}`,
+                                borderRadius: 4,
+                                color: t.fgMuted,
+                              }}
+                            >
+                              Pending
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                );
+              })}
+            </div>
+
+            {/* Commit count footer */}
+            <div
+              style={{ textAlign: "center", padding: "20px 0 8px", fontSize: 13, color: t.fgMuted }}
+            >
+              Showing {commits.length} commit{commits.length !== 1 ? "s" : ""}
+            </div>
           </div>
         )}
 
         {/* Back link */}
-        <div className="mt-6">
-          <Link
-            href={`/containers/${encodeURIComponent(containerId)}`}
-            className="text-sm text-[#8b949e] hover:text-gray-900 transition flex items-center gap-1"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to container
-          </Link>
-        </div>
+        {!loading && (
+          <div style={{ marginTop: 24 }}>
+            <Link
+              href={`/containers/${encodeURIComponent(containerId)}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 14,
+                color: t.fgMuted,
+                textDecoration: "none",
+              }}
+            >
+              <Ic.Back /> Back to container
+            </Link>
+          </div>
+        )}
       </div>
-    </div>
+    </AppShell>
   );
 }

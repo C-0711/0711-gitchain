@@ -26,6 +26,11 @@ const PUBLIC_ROUTES = [
   "/verify",
   "/explore",
   "/trending",
+  "/terms",
+  "/privacy",
+  "/containers",
+  "/users",
+  "/inject",
 ];
 
 // API routes that don't require authentication
@@ -49,7 +54,9 @@ function getSecurityHeaders(): Record<string, string> {
     // Content Security Policy
     "Content-Security-Policy": [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js requires unsafe-eval in dev
+      isProduction
+        ? "script-src 'self' 'unsafe-inline'"
+        : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https: blob:",
       "font-src 'self' data:",
@@ -83,8 +90,7 @@ function getSecurityHeaders(): Record<string, string> {
     // HSTS (only in production with HTTPS)
     ...(isProduction
       ? {
-          "Strict-Transport-Security":
-            "max-age=31536000; includeSubDomains; preload",
+          "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
         }
       : {}),
 
@@ -99,23 +105,17 @@ function getSecurityHeaders(): Record<string, string> {
 
 function isPublicRoute(pathname: string): boolean {
   // Check exact matches and prefixes
-  return PUBLIC_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/")
-  );
+  return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));
 }
 
 function isPublicApiRoute(pathname: string): boolean {
   // Check exact matches and prefixes for API routes
-  return PUBLIC_API_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/")
-  );
+  return PUBLIC_API_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));
 }
 
 function isStaticAsset(pathname: string): boolean {
   return (
-    pathname.startsWith("/_next/") ||
-    pathname.startsWith("/static/") ||
-    pathname.includes(".") // Files with extensions
+    pathname.startsWith("/_next/") || pathname.startsWith("/static/") || pathname.includes(".") // Files with extensions
   );
 }
 
@@ -145,8 +145,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Add request ID for tracing
-  const requestId =
-    request.headers.get("x-request-id") || crypto.randomUUID();
+  const requestId = request.headers.get("x-request-id") || crypto.randomUUID();
   response.headers.set("X-Request-Id", requestId);
 
   // Check authentication for protected routes
@@ -154,9 +153,7 @@ export function middleware(request: NextRequest) {
     // API routes: check for auth token
     if (!isPublicApiRoute(pathname)) {
       const authHeader = request.headers.get("authorization");
-      const hasAuth =
-        authHeader?.startsWith("Bearer ") ||
-        request.cookies.has("gitchain_session");
+      const hasAuth = authHeader?.startsWith("Bearer ") || request.cookies.has("gitchain_session");
 
       if (!hasAuth) {
         return NextResponse.json(

@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc -w",
-    "test": "jest",
+    "test": "jest --config ../../jest.config.js --selectProjects c2pa",
     "clean": "rm -rf dist"
   },
   "dependencies": {

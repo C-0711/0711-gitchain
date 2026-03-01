@@ -19,7 +19,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const routes = staticPages.map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date().toISOString(),
-    changeFrequency: route === "" ? "daily" : "weekly" as const,
+    changeFrequency: (route === "" ? "daily" : "weekly") as "daily" | "weekly",
     priority: route === "" ? 1 : route === "/pricing" ? 0.9 : 0.8,
   }));
 

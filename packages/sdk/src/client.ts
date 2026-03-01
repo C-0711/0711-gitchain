@@ -63,27 +63,20 @@ export class GitChainClient {
       txHash?: string;
     };
   }> {
-    const response = await this.request<any>(
-      "GET",
-      `/api/verify/${encodeURIComponent(hashOrId)}`
-    );
+    const response = await this.request<any>("GET", `/api/verify/${encodeURIComponent(hashOrId)}`);
     return response;
   }
 
   /**
    * Make HTTP request
    */
-  private async request<T>(
-    method: string,
-    path: string,
-    body?: unknown
-  ): Promise<T> {
+  private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const url = `${this.config.apiUrl}${path}`;
-    
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
-    
+
     if (this.config.apiKey) {
       headers["Authorization"] = `Bearer ${this.config.apiKey}`;
     }
@@ -96,11 +89,11 @@ export class GitChainClient {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
+      const error = (await response.json().catch(() => ({}))) as any;
       throw new Error(error.message || `HTTP ${response.status}`);
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   }
 }
 

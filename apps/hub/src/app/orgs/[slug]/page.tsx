@@ -1,8 +1,35 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useState, useEffect } from "react";
+
+import AppShell, { PageHeader, Card, SectionTitle, theme as t } from "@/components/AppShell";
+
+const mono = "'SFMono-Regular','Consolas','Liberation Mono','Menlo',monospace";
+
+const Ic = {
+  Shield: ({ s = 12 }: { s?: number }) => (
+    <svg width={s} height={s} viewBox="0 0 16 16" fill="currentColor">
+      <path d="M7.467.133a1.748 1.748 0 0 1 1.066 0l5.25 1.68A1.75 1.75 0 0 1 15 3.48V7c0 1.566-.32 3.182-1.303 4.682-.983 1.498-2.585 2.813-5.032 3.855a1.697 1.697 0 0 1-1.33 0c-2.447-1.042-4.049-2.357-5.032-3.855C1.32 10.182 1 8.566 1 7V3.48a1.75 1.75 0 0 1 1.217-1.667Z" />
+    </svg>
+  ),
+  Plus: () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2Z" />
+    </svg>
+  ),
+  Layers: () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="m8.628 1.248 6 3.428a.75.75 0 0 1 0 1.302l-6 3.428a1.25 1.25 0 0 1-1.256 0l-6-3.428a.75.75 0 0 1 0-1.302l6-3.428a1.25 1.25 0 0 1 1.256 0Z" />
+    </svg>
+  ),
+  Gear: () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M8 0a8.2 8.2 0 0 1 .701.031C9.444.095 9.99.645 10.16 1.29l.288 1.107c.018.066.079.158.212.224.231.114.454.243.668.386.123.082.233.09.299.071l1.103-.303c.644-.176 1.392.021 1.82.63.27.385.506.792.704 1.218.315.675.111 1.422-.364 1.891l-.814.806c-.049.048-.098.147-.088.294.016.257.016.515 0 .772-.01.147.04.246.088.294l.814.806c.475.469.679 1.216.364 1.891a7.977 7.977 0 0 1-.704 1.217c-.428.61-1.176.807-1.82.63l-1.103-.303c-.066-.019-.176-.011-.299.071a5.909 5.909 0 0 1-.668.386c-.133.066-.194.158-.212.224l-.288 1.107c-.17.645-.716 1.195-1.459 1.26a8.006 8.006 0 0 1-1.402 0c-.743-.065-1.289-.615-1.459-1.26l-.289-1.107c-.017-.066-.078-.158-.211-.224a5.909 5.909 0 0 1-.668-.386c-.123-.082-.233-.09-.299-.071l-1.103.303c-.644.176-1.392-.021-1.82-.63a8.12 8.12 0 0 1-.704-1.218c-.315-.675-.111-1.422.363-1.891l.815-.806c.049-.048.098-.147.088-.294a6.214 6.214 0 0 1 0-.772c.01-.147-.04-.246-.088-.294l-.815-.806C.635 6.045.431 5.298.746 4.623a7.92 7.92 0 0 1 .704-1.217c.428-.61 1.176-.807 1.82-.63l1.103.303c.066.019.176.011.299-.071.214-.143.437-.272.668-.386.133-.066.194-.158.212-.224L5.84 1.29c.17-.645.716-1.195 1.459-1.26A8.394 8.394 0 0 1 8 0ZM5.5 8a2.5 2.5 0 1 0 5 0 2.5 2.5 0 0 0-5 0Z" />
+    </svg>
+  ),
+};
 
 interface Organization {
   id: string;
@@ -26,11 +53,29 @@ interface Member {
   avatar_url: string | null;
 }
 
+interface OrgContainer {
+  id: string;
+  uuid: string;
+  type: string;
+  identifier: string;
+  name: string;
+  description: string;
+  isVerified: boolean;
+  stats?: { atoms?: number };
+  updatedAt: string;
+}
+
 interface Stats {
   member_count: number;
   container_count: number;
   pending_invites: number;
 }
+
+const roleBadgeStyle: Record<string, { bg: string; fg: string }> = {
+  owner: { bg: "#ffebe9", fg: "#cf222e" },
+  admin: { bg: "#fbefff", fg: "#8250df" },
+  member: { bg: t.canvas, fg: t.fgMuted },
+};
 
 export default function OrganizationPage() {
   const params = useParams();
@@ -38,6 +83,7 @@ export default function OrganizationPage() {
 
   const [org, setOrg] = useState<Organization | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  const [containers, setContainers] = useState<OrgContainer[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,7 +92,7 @@ export default function OrganizationPage() {
   useEffect(() => {
     async function fetchOrg() {
       try {
-        const token = localStorage.getItem("gitchain_token");
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
         const headers: HeadersInit = {};
         if (token) headers["Authorization"] = `Bearer ${token}`;
 
@@ -57,13 +103,19 @@ export default function OrganizationPage() {
         }
         const orgData = await orgRes.json();
         setOrg(orgData.organization);
-        setRole(orgData.role);
-        setStats(orgData.stats);
+        setRole(orgData.role || null);
+        setStats(orgData.stats || null);
+        setContainers(orgData.containers || []);
 
-        const membersRes = await fetch(`/api/organizations/${slug}/members`, { headers });
-        if (membersRes.ok) {
-          const membersData = await membersRes.json();
-          setMembers(membersData.members);
+        // Fetch members separately
+        try {
+          const membersRes = await fetch(`/api/organizations/${slug}/members`, { headers });
+          if (membersRes.ok) {
+            const membersData = await membersRes.json();
+            setMembers(membersData.members || []);
+          }
+        } catch {
+          // Members fetch is optional
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error loading organization");
@@ -76,118 +128,507 @@ export default function OrganizationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-      </div>
+      <AppShell>
+        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 24px" }}>
+          <div style={{ textAlign: "center", padding: 60, color: t.fgMuted }}>
+            Loading organization...
+          </div>
+        </div>
+      </AppShell>
     );
   }
 
   if (error || !org) {
     return (
-      <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">Organization not found</h1>
-          <p className="text-[#8b949e] mb-4">{error}</p>
-          <Link href="/orgs" className="text-[#58a6ff] hover:underline">Back to organizations</Link>
+      <AppShell>
+        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 24px" }}>
+          <div
+            style={{
+              textAlign: "center",
+              padding: 60,
+              backgroundColor: "#fff",
+              border: `1px solid ${t.border}`,
+              borderRadius: 8,
+            }}
+          >
+            <h3 style={{ fontSize: 18, fontWeight: 600, color: t.fg, margin: "0 0 8px" }}>
+              Organization not found
+            </h3>
+            <p style={{ fontSize: 14, color: t.fgMuted, marginBottom: 20 }}>{error}</p>
+            <Link
+              href="/explore"
+              style={{
+                display: "inline-block",
+                padding: "8px 16px",
+                backgroundColor: t.accent,
+                color: "#fff",
+                borderRadius: 6,
+                fontSize: 14,
+                fontWeight: 600,
+                textDecoration: "none",
+              }}
+            >
+              Back to Explore
+            </Link>
+          </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   const isAdmin = role === "owner" || role === "admin";
 
   return (
-    <div className="min-h-screen bg-[#0d1117]">
-      <div className="border-b border-[#30363d] bg-[#161b22]">
-        <div className="max-w-6xl mx-auto px-6 py-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-lg bg-[#30363d] flex items-center justify-center text-2xl">🏢</div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl font-bold text-white">{org.name}</h1>
-                  {org.verified && <span className="px-2 py-0.5 bg-[#238636]/20 text-[#3fb950] text-xs rounded-full">✓ Verified</span>}
-                  <span className="px-2 py-0.5 bg-[#30363d] text-[#8b949e] text-xs rounded-full uppercase">{org.plan}</span>
-                </div>
-                <p className="text-[#8b949e]">@{org.slug}</p>
-                {org.description && <p className="text-[#8b949e] mt-1">{org.description}</p>}
+    <AppShell>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 24px" }}>
+        {/* Org Header */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            marginBottom: 24,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: 12,
+                background: "linear-gradient(135deg, #238636, #0969da)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                fontSize: 28,
+                fontWeight: 700,
+              }}
+            >
+              {org.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <h1 style={{ fontSize: 24, fontWeight: 700, color: t.fg, margin: 0 }}>
+                  {org.name}
+                </h1>
+                {org.verified && (
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 3,
+                      padding: "0 6px",
+                      fontSize: 11,
+                      fontFamily: mono,
+                      lineHeight: "18px",
+                      borderRadius: 12,
+                      backgroundColor: "#dafbe1",
+                      border: "1px solid #aceebb",
+                      color: "#1a7f37",
+                    }}
+                  >
+                    <Ic.Shield s={10} /> verified
+                  </span>
+                )}
+                {org.plan && (
+                  <span
+                    style={{
+                      padding: "0 8px",
+                      fontSize: 11,
+                      fontFamily: mono,
+                      lineHeight: "22px",
+                      borderRadius: 12,
+                      backgroundColor: t.canvas,
+                      border: `1px solid ${t.border}`,
+                      color: t.fgMuted,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {org.plan}
+                  </span>
+                )}
               </div>
+              <span style={{ fontFamily: mono, fontSize: 14, color: t.fgMuted }}>@{org.slug}</span>
+              {org.description && (
+                <p style={{ fontSize: 14, color: t.fgMuted, margin: "6px 0 0", maxWidth: 600 }}>
+                  {org.description}
+                </p>
+              )}
             </div>
-            {isAdmin && (
-              <Link href={`/orgs/${slug}/settings`} className="px-4 py-2 border border-[#30363d] rounded-md text-[#c9d1d9] hover:bg-[#30363d]">⚙️ Settings</Link>
-            )}
           </div>
-        </div>
-      </div>
-
-      <div className="max-w-6xl mx-auto px-6 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="p-4 bg-[#161b22] border border-[#30363d] rounded-lg">
-            <div className="text-2xl font-bold text-white">{stats?.member_count || 0}</div>
-            <div className="text-[#8b949e]">Members</div>
-          </div>
-          <div className="p-4 bg-[#161b22] border border-[#30363d] rounded-lg">
-            <div className="text-2xl font-bold text-white">{stats?.container_count || 0}</div>
-            <div className="text-[#8b949e]">Containers</div>
-          </div>
-          <div className="p-4 bg-[#161b22] border border-[#30363d] rounded-lg">
-            <div className="text-2xl font-bold text-white">{stats?.pending_invites || 0}</div>
-            <div className="text-[#8b949e]">Pending Invites</div>
-          </div>
-          <div className="p-4 bg-[#161b22] border border-[#30363d] rounded-lg">
-            <div className="text-2xl font-bold text-white capitalize">{role || "—"}</div>
-            <div className="text-[#8b949e]">Your Role</div>
-          </div>
+          {isAdmin && (
+            <Link
+              href={`/orgs/${slug}/settings`}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 14px",
+                backgroundColor: "#fff",
+                color: t.fg,
+                border: `1px solid ${t.border}`,
+                borderRadius: 6,
+                fontSize: 14,
+                fontWeight: 500,
+                textDecoration: "none",
+              }}
+            >
+              <Ic.Gear /> Settings
+            </Link>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Members</h2>
-              {isAdmin && <Link href={`/orgs/${slug}/members`} className="text-sm text-[#58a6ff] hover:underline">Manage →</Link>}
+        {/* Stats Row */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: 16,
+            marginBottom: 24,
+          }}
+        >
+          {[
+            { label: "Members", value: stats?.member_count || members.length || 0 },
+            { label: "Containers", value: stats?.container_count || containers.length || 0 },
+            { label: "Pending Invites", value: stats?.pending_invites || 0 },
+            { label: "Your Role", value: role || "--" },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              style={{
+                backgroundColor: "#fff",
+                border: `1px solid ${t.border}`,
+                borderRadius: 8,
+                padding: 16,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 28,
+                  fontWeight: 700,
+                  color: t.fg,
+                  fontFamily: mono,
+                  textTransform: "capitalize",
+                }}
+              >
+                {typeof stat.value === "number" ? stat.value.toLocaleString() : stat.value}
+              </div>
+              <div style={{ fontSize: 13, color: t.fgMuted, marginTop: 4 }}>{stat.label}</div>
             </div>
-            <div className="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden">
-              {members.length === 0 ? (
-                <div className="p-6 text-center text-[#8b949e]">No members yet</div>
-              ) : (
-                <div className="divide-y divide-[#30363d]">
-                  {members.slice(0, 10).map((member) => (
-                    <div key={member.id} className="px-4 py-3 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#30363d] flex items-center justify-center text-sm">
-                          {(member.name || member.email)[0].toUpperCase()}
+          ))}
+        </div>
+
+        <div style={{ display: "flex", gap: 24 }}>
+          {/* Main content: Members list */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 16,
+              }}
+            >
+              <SectionTitle>Members</SectionTitle>
+              {isAdmin && (
+                <Link
+                  href={`/orgs/${slug}/members`}
+                  style={{ fontSize: 13, color: t.link, textDecoration: "none" }}
+                >
+                  Manage members
+                </Link>
+              )}
+            </div>
+
+            {members.length === 0 ? (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: 40,
+                  backgroundColor: "#fff",
+                  border: `1px dashed ${t.border}`,
+                  borderRadius: 8,
+                  color: t.fgMuted,
+                  fontSize: 14,
+                }}
+              >
+                No members yet
+              </div>
+            ) : (
+              <div
+                style={{
+                  backgroundColor: "#fff",
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 8,
+                  overflow: "hidden",
+                }}
+              >
+                {members.map((member, i) => {
+                  const badge = roleBadgeStyle[member.role] || roleBadgeStyle.member;
+                  return (
+                    <div
+                      key={member.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "12px 16px",
+                        borderBottom: i < members.length - 1 ? `1px solid ${t.border}` : "none",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        {/* Avatar */}
+                        <div
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: "50%",
+                            background: "linear-gradient(135deg, #238636, #0969da)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#fff",
+                            fontSize: 13,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {(member.name || member.email || "U").charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <div className="text-white">{member.name || member.username || member.email}</div>
-                          <div className="text-xs text-[#8b949e]">{member.email}</div>
+                          <div style={{ fontSize: 14, fontWeight: 500, color: t.fg }}>
+                            {member.name || member.username || member.email}
+                          </div>
+                          <div style={{ fontSize: 12, color: t.fgMuted }}>{member.email}</div>
                         </div>
                       </div>
-                      <span className={`px-2 py-0.5 text-xs rounded-full ${
-                        member.role === "owner" ? "bg-[#da3633]/20 text-[#f85149]" :
-                        member.role === "admin" ? "bg-[#a371f7]/20 text-[#a371f7]" :
-                        "bg-[#30363d] text-[#8b949e]"
-                      }`}>{member.role}</span>
+                      <span
+                        style={{
+                          padding: "0 8px",
+                          fontSize: 11,
+                          lineHeight: "22px",
+                          borderRadius: 12,
+                          fontFamily: mono,
+                          textTransform: "capitalize",
+                          backgroundColor: badge.bg,
+                          color: badge.fg,
+                        }}
+                      >
+                        {member.role}
+                      </span>
                     </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Org Containers */}
+            {containers.length > 0 && (
+              <div style={{ marginTop: 24 }}>
+                <SectionTitle>Containers</SectionTitle>
+                <div
+                  style={{
+                    backgroundColor: "#fff",
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 8,
+                    overflow: "hidden",
+                  }}
+                >
+                  {containers.map((c, i) => (
+                    <Link
+                      key={c.uuid || c.id}
+                      href={`/containers/${c.uuid || c.id}`}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "12px 16px",
+                        borderBottom: i < containers.length - 1 ? `1px solid ${t.border}` : "none",
+                        textDecoration: "none",
+                        color: t.fg,
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontWeight: 600, fontSize: 14, color: t.link }}>
+                            {c.name || c.identifier}
+                          </span>
+                          {c.isVerified && (
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 3,
+                                padding: "0 6px",
+                                fontSize: 11,
+                                fontFamily: mono,
+                                lineHeight: "18px",
+                                borderRadius: 12,
+                                backgroundColor: "#dafbe1",
+                                border: "1px solid #aceebb",
+                                color: "#1a7f37",
+                              }}
+                            >
+                              <Ic.Shield s={10} /> verified
+                            </span>
+                          )}
+                        </div>
+                        {c.description && (
+                          <p
+                            style={{
+                              fontSize: 13,
+                              color: t.fgMuted,
+                              margin: "4px 0 0",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {c.description}
+                          </p>
+                        )}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 12,
+                            marginTop: 4,
+                            fontSize: 12,
+                            color: t.fgMuted,
+                          }}
+                        >
+                          <span
+                            style={{
+                              padding: "0 6px",
+                              fontSize: 11,
+                              lineHeight: "18px",
+                              borderRadius: 10,
+                              backgroundColor: t.canvas,
+                              border: `1px solid ${t.border}`,
+                              textTransform: "capitalize",
+                            }}
+                          >
+                            {c.type}
+                          </span>
+                          <span>{c.stats?.atoms?.toLocaleString() || 0} atoms</span>
+                        </div>
+                      </div>
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill={t.fgMuted}
+                        style={{ flexShrink: 0, marginLeft: 12 }}
+                      >
+                        <path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.751.751 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" />
+                      </svg>
+                    </Link>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
-          <div>
-            <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
-            <div className="space-y-2">
-              <Link href={`/containers/new?org=${slug}`} className="block w-full p-3 bg-[#238636] hover:bg-[#2ea043] text-white rounded-lg text-center">+ New Container</Link>
-              {isAdmin && (
-                <>
-                  <Link href={`/orgs/${slug}/members/invite`} className="block w-full p-3 bg-[#161b22] border border-[#30363d] hover:border-[#484f58] text-white rounded-lg text-center">👤 Invite Member</Link>
-                  <Link href={`/orgs/${slug}/settings`} className="block w-full p-3 bg-[#161b22] border border-[#30363d] hover:border-[#484f58] text-white rounded-lg text-center">⚙️ Settings</Link>
-                </>
-              )}
+          {/* Sidebar: Quick Actions */}
+          <div style={{ width: 260, flexShrink: 0 }}>
+            <Card>
+              <h3 style={{ fontSize: 14, fontWeight: 600, color: t.fg, margin: "0 0 12px" }}>
+                Quick Actions
+              </h3>
+              <div style={{ display: "grid", gap: 8 }}>
+                <Link
+                  href={`/containers/new?org=${slug}`}
+                  style={{
+                    display: "block",
+                    padding: "10px 14px",
+                    textAlign: "center",
+                    backgroundColor: t.accent,
+                    color: "#fff",
+                    borderRadius: 6,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    textDecoration: "none",
+                  }}
+                >
+                  + New Container
+                </Link>
+                {isAdmin && (
+                  <>
+                    <Link
+                      href={`/orgs/${slug}/members/invite`}
+                      style={{
+                        display: "block",
+                        padding: "10px 14px",
+                        textAlign: "center",
+                        backgroundColor: "#fff",
+                        color: t.fg,
+                        border: `1px solid ${t.border}`,
+                        borderRadius: 6,
+                        fontSize: 14,
+                        fontWeight: 500,
+                        textDecoration: "none",
+                      }}
+                    >
+                      Invite Member
+                    </Link>
+                    <Link
+                      href={`/orgs/${slug}/settings`}
+                      style={{
+                        display: "block",
+                        padding: "10px 14px",
+                        textAlign: "center",
+                        backgroundColor: "#fff",
+                        color: t.fg,
+                        border: `1px solid ${t.border}`,
+                        borderRadius: 6,
+                        fontSize: 14,
+                        fontWeight: 500,
+                        textDecoration: "none",
+                      }}
+                    >
+                      Settings
+                    </Link>
+                  </>
+                )}
+              </div>
+            </Card>
+
+            {/* Org Info */}
+            <div style={{ marginTop: 16 }}>
+              <Card>
+                <h3 style={{ fontSize: 14, fontWeight: 600, color: t.fg, margin: "0 0 12px" }}>
+                  About
+                </h3>
+                <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
+                  {org.website && (
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 8, color: t.fgMuted }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M7.775 3.275a.75.75 0 0 0 1.06 1.06l1.25-1.25a2 2 0 1 1 2.83 2.83l-2.5 2.5a2 2 0 0 1-2.83 0 .75.75 0 0 0-1.06 1.06 3.5 3.5 0 0 0 4.95 0l2.5-2.5a3.5 3.5 0 0 0-4.95-4.95l-1.25 1.25Zm-.025 5.475a.75.75 0 0 0-1.06-1.06l-1.25 1.25a2 2 0 1 1-2.83-2.83l2.5-2.5a2 2 0 0 1 2.83 0 .75.75 0 0 0 1.06-1.06 3.5 3.5 0 0 0-4.95 0l-2.5 2.5a3.5 3.5 0 0 0 4.95 4.95l1.25-1.25Z" />
+                      </svg>
+                      <a
+                        href={org.website}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: t.link, textDecoration: "none" }}
+                      >
+                        {org.website.replace(/^https?:\/\//, "")}
+                      </a>
+                    </div>
+                  )}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, color: t.fgMuted }}>
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M4.75 0a.75.75 0 0 1 .75.75V2h5V.75a.75.75 0 0 1 1.5 0V2h1.25c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 13.25 16H2.75A1.75 1.75 0 0 1 1 14.25V3.75C1 2.784 1.784 2 2.75 2H4V.75A.75.75 0 0 1 4.75 0ZM2.5 7.5v6.75c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25V7.5Zm10.75-4H2.75a.25.25 0 0 0-.25.25V6h11V3.75a.25.25 0 0 0-.25-.25Z" />
+                    </svg>
+                    <span>Created {new Date(org.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </Card>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }

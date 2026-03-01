@@ -1,312 +1,580 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useState, useEffect } from "react";
+
+import AppShell, { PageHeader, Card, SectionTitle, theme as t } from "@/components/AppShell";
+
+const mono = "'SFMono-Regular','Consolas','Liberation Mono','Menlo',monospace";
+
+const Ic = {
+  Shield: ({ s = 12 }: { s?: number }) => (
+    <svg width={s} height={s} viewBox="0 0 16 16" fill="currentColor">
+      <path d="M7.467.133a1.748 1.748 0 0 1 1.066 0l5.25 1.68A1.75 1.75 0 0 1 15 3.48V7c0 1.566-.32 3.182-1.303 4.682-.983 1.498-2.585 2.813-5.032 3.855a1.697 1.697 0 0 1-1.33 0c-2.447-1.042-4.049-2.357-5.032-3.855C1.32 10.182 1 8.566 1 7V3.48a1.75 1.75 0 0 1 1.217-1.667Z" />
+    </svg>
+  ),
+  Plus: () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2Z" />
+    </svg>
+  ),
+  Folder: () => (
+    <svg width="20" height="20" viewBox="0 0 16 16" fill="#656d76">
+      <path d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.927-1.236A1.75 1.75 0 0 0 4.972 1Z" />
+    </svg>
+  ),
+  Layers: () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="m8.628 1.248 6 3.428a.75.75 0 0 1 0 1.302l-6 3.428a1.25 1.25 0 0 1-1.256 0l-6-3.428a.75.75 0 0 1 0-1.302l6-3.428a1.25 1.25 0 0 1 1.256 0Z" />
+    </svg>
+  ),
+};
 
 interface Container {
   id: string;
+  uuid: string;
   type: string;
   identifier: string;
-  version: number;
   name: string;
   description: string;
   isVerified: boolean;
-  stats: { atoms: number };
+  version?: number;
+  stats?: { atoms?: number };
   updatedAt: string;
-}
-
-interface Member {
-  user_id: string;
-  role: string;
-  user_name?: string;
-  email?: string;
 }
 
 interface NamespaceData {
   name: string;
-  displayName: string;
-  description: string;
-  visibility: string;
+  displayName?: string;
+  description?: string;
+  type?: string;
+  visibility?: string;
   containers: Container[];
-  members: Member[];
-  stats: {
+  members?: Array<{ user_id: string; role: string; user_name?: string; email?: string }>;
+  stats?: {
     containerCount: number;
-    memberCount: number;
-    totalAtoms: number;
-    verifiedCount: number;
+    memberCount?: number;
+    totalAtoms?: number;
+    verifiedCount?: number;
   };
-  createdAt: string;
+  createdAt?: string;
 }
 
-const typeConfig: Record<string, { icon: string; bg: string; text: string }> = {
-  product:   { icon: '📦', bg: 'bg-emerald-100', text: 'text-emerald-600' },
-  campaign:  { icon: '📢', bg: 'bg-blue-100',    text: 'text-blue-400' },
-  project:   { icon: '📋', bg: 'bg-purple-900/30',  text: 'text-purple-400' },
-  memory:    { icon: '🧠', bg: 'bg-orange-900/30',  text: 'text-orange-400' },
-  knowledge: { icon: '📚', bg: 'bg-yellow-900/30',  text: 'text-yellow-400' },
+const typeBadgeColors: Record<string, { bg: string; fg: string; border: string }> = {
+  product: { bg: "#dafbe1", fg: "#1a7f37", border: "#aceebb" },
+  knowledge: { bg: "#fff8c5", fg: "#9a6700", border: "#f5e0a0" },
+  project: { bg: "#ddf4ff", fg: "#0969da", border: "#b6d7f6" },
+  campaign: { bg: "#fbefff", fg: "#8250df", border: "#e4c5f0" },
+  memory: { bg: "#fff1e5", fg: "#bc4c00", border: "#ffd8b5" },
 };
 
-export default function NamespacePage({ params }: { params: { name: string } }) {
+export default function NamespaceDetailPage() {
+  const params = useParams();
+  const name = params.name as string;
+
   const [namespace, setNamespace] = useState<NamespaceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState('recent');
+  const [sortBy, setSortBy] = useState("recent");
 
   useEffect(() => {
-    fetchNamespace();
-  }, [params.name]);
-
-  const fetchNamespace = async () => {
-    try {
-      const res = await fetch(`/api/namespaces/${encodeURIComponent(params.name)}`);
-      if (!res.ok) {
-        if (res.status === 404) {
-          setError('Namespace not found');
-        } else {
-          setError('Failed to load namespace');
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    fetch(`/api/namespaces/${encodeURIComponent(name)}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((r) => {
+        if (!r.ok) {
+          if (r.status === 404) throw new Error("Namespace not found");
+          throw new Error("Failed to load namespace");
         }
-        return;
-      }
-      const data = await res.json();
-      setNamespace(data);
-    } catch (err) {
-      setError('Failed to load namespace');
-    } finally {
-      setLoading(false);
-    }
-  };
+        return r.json();
+      })
+      .then((data) => {
+        setNamespace(data);
+      })
+      .catch((err) => {
+        setError(err.message);
+      })
+      .finally(() => setLoading(false));
+  }, [name]);
 
-  const sortedContainers = namespace?.containers.sort((a, b) => {
-    if (sortBy === 'name') return a.name.localeCompare(b.name);
-    if (sortBy === 'atoms') return (b.stats?.atoms || 0) - (a.stats?.atoms || 0);
+  const sortedContainers = [...(namespace?.containers || [])].sort((a, b) => {
+    if (sortBy === "name") return a.name.localeCompare(b.name);
+    if (sortBy === "atoms") return (b.stats?.atoms || 0) - (a.stats?.atoms || 0);
     return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-  }) || [];
+  });
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100">
-        <div className="max-w-[1280px] mx-auto px-6 py-8">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-gray-50 rounded w-1/4"></div>
-            <div className="h-4 bg-gray-50 rounded w-1/2"></div>
-            <div className="grid grid-cols-4 gap-4">
-              {[1,2,3,4].map(i => <div key={i} className="h-20 bg-gray-50 rounded"></div>)}
-            </div>
+      <AppShell>
+        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 24px" }}>
+          <div style={{ textAlign: "center", padding: 60, color: t.fgMuted }}>
+            Loading namespace...
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   if (error || !namespace) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4">📁</div>
-          <h2 className="text-2xl font-bold mb-2">Namespace not found</h2>
-          <p className="text-gray-600 mb-6">{error || 'The namespace you requested could not be found.'}</p>
-          <Link href="/namespaces" className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg transition">
-            Browse Namespaces
-          </Link>
+      <AppShell>
+        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 24px" }}>
+          <div
+            style={{
+              textAlign: "center",
+              padding: 60,
+              backgroundColor: "#fff",
+              border: `1px solid ${t.border}`,
+              borderRadius: 8,
+            }}
+          >
+            <div style={{ marginBottom: 16, color: t.fgMuted }}>
+              <Ic.Folder />
+            </div>
+            <h3 style={{ fontSize: 18, fontWeight: 600, color: t.fg, margin: "0 0 8px" }}>
+              Namespace not found
+            </h3>
+            <p style={{ fontSize: 14, color: t.fgMuted, marginBottom: 20 }}>
+              {error || "The namespace you requested could not be found."}
+            </p>
+            <Link
+              href="/namespaces"
+              style={{
+                display: "inline-block",
+                padding: "8px 16px",
+                backgroundColor: t.accent,
+                color: "#fff",
+                borderRadius: 6,
+                fontSize: 14,
+                fontWeight: 600,
+                textDecoration: "none",
+              }}
+            >
+              Browse Namespaces
+            </Link>
+          </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
+  const typeBadge = typeBadgeColors[namespace.type || ""] || {
+    bg: t.canvas,
+    fg: t.fgMuted,
+    border: t.border,
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 text-[#c9d1d9]">
-      {/* Header */}
-      <div className="border-b border-[#21262d]">
-        <div className="max-w-[1280px] mx-auto px-6 py-8">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-lg flex items-center justify-center text-2xl font-bold">
-                  {namespace.displayName.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">{namespace.displayName}</h1>
-                  <p className="text-[#8b949e]">@{namespace.name}</p>
-                </div>
+    <AppShell>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 24px" }}>
+        {/* Header */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            marginBottom: 24,
+          }}
+        >
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 8,
+                  background: "linear-gradient(135deg, #238636, #0969da)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  fontSize: 20,
+                  fontWeight: 700,
+                }}
+              >
+                {(namespace.displayName || namespace.name).charAt(0).toUpperCase()}
               </div>
-              {namespace.description && (
-                <p className="text-[#8b949e] mt-3 max-w-2xl">{namespace.description}</p>
-              )}
-              <div className="flex items-center gap-6 mt-4 text-sm text-[#8b949e]">
-                <span className="flex items-center gap-1">
-                  <span>📦</span>
-                  <strong className="text-gray-900">{namespace.stats.containerCount}</strong> containers
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <h1 style={{ fontSize: 24, fontWeight: 700, color: t.fg, margin: 0 }}>
+                    {namespace.displayName || namespace.name}
+                  </h1>
+                  {namespace.type && (
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "0 8px",
+                        fontSize: 11,
+                        fontFamily: mono,
+                        lineHeight: "22px",
+                        borderRadius: 12,
+                        backgroundColor: typeBadge.bg,
+                        border: `1px solid ${typeBadge.border}`,
+                        color: typeBadge.fg,
+                      }}
+                    >
+                      {namespace.type}
+                    </span>
+                  )}
+                </div>
+                <span style={{ fontFamily: mono, fontSize: 14, color: t.fgMuted }}>
+                  @{namespace.name}
                 </span>
-                <span className="flex items-center gap-1">
-                  <span>⚛️</span>
-                  <strong className="text-gray-900">{namespace.stats.totalAtoms.toLocaleString()}</strong> atoms
-                </span>
-                <span className="flex items-center gap-1">
-                  <span>⛓️</span>
-                  <strong className="text-gray-900">{namespace.stats.verifiedCount}</strong> verified
-                </span>
-                {namespace.stats.memberCount > 0 && (
-                  <span className="flex items-center gap-1">
-                    <span>👥</span>
-                    <strong className="text-gray-900">{namespace.stats.memberCount}</strong> members
-                  </span>
-                )}
               </div>
             </div>
-            <div className="flex gap-2">
-              <Link
-                href={`/containers/new?namespace=${namespace.name}`}
-                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium transition"
-              >
-                New Container
-              </Link>
+            {namespace.description && (
+              <p style={{ fontSize: 14, color: t.fgMuted, margin: "8px 0 0", maxWidth: 600 }}>
+                {namespace.description}
+              </p>
+            )}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 20,
+                marginTop: 12,
+                fontSize: 13,
+                color: t.fgMuted,
+              }}
+            >
+              <span>
+                <strong style={{ color: t.fg }}>
+                  {namespace.stats?.containerCount || sortedContainers.length}
+                </strong>{" "}
+                containers
+              </span>
+              {namespace.stats?.totalAtoms != null && (
+                <span>
+                  <strong style={{ color: t.fg }}>
+                    {namespace.stats.totalAtoms.toLocaleString()}
+                  </strong>{" "}
+                  atoms
+                </span>
+              )}
+              {namespace.stats?.verifiedCount != null && (
+                <span>
+                  <strong style={{ color: t.fg }}>{namespace.stats.verifiedCount}</strong> verified
+                </span>
+              )}
+              {namespace.stats?.memberCount != null && namespace.stats.memberCount > 0 && (
+                <span>
+                  <strong style={{ color: t.fg }}>{namespace.stats.memberCount}</strong> members
+                </span>
+              )}
             </div>
           </div>
+          <Link
+            href={`/containers/new?namespace=${namespace.name}`}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 16px",
+              backgroundColor: t.accent,
+              color: "#fff",
+              borderRadius: 6,
+              fontSize: 14,
+              fontWeight: 600,
+              textDecoration: "none",
+            }}
+          >
+            <Ic.Plus /> New container
+          </Link>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="max-w-[1280px] mx-auto px-6 py-6">
-        <div className="flex gap-8">
-          {/* Main content */}
-          <div className="flex-1">
-            {/* Containers header */}
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">
-                Containers
-                <span className="ml-2 text-sm font-normal text-[#8b949e]">{sortedContainers.length}</span>
-              </h2>
-              <div className="flex items-center gap-2">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="bg-[#21262d] border border-[#30363d] rounded-md px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none"
-                >
-                  <option value="recent">Recently updated</option>
-                  <option value="name">Name</option>
-                  <option value="atoms">Most atoms</option>
-                </select>
-              </div>
+        <div style={{ display: "flex", gap: 24 }}>
+          {/* Main: Containers list */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 16,
+              }}
+            >
+              <SectionTitle>Containers</SectionTitle>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                style={{
+                  padding: "6px 10px",
+                  fontSize: 13,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 6,
+                  backgroundColor: "#fff",
+                  color: t.fg,
+                  cursor: "pointer",
+                }}
+              >
+                <option value="recent">Recently updated</option>
+                <option value="name">Name</option>
+                <option value="atoms">Most atoms</option>
+              </select>
             </div>
 
-            {/* Containers list */}
             {sortedContainers.length === 0 ? (
-              <div className="border border-[#30363d] rounded-lg p-12 text-center">
-                <div className="text-4xl mb-3">📦</div>
-                <p className="text-[#8b949e] mb-4">No containers yet</p>
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: 48,
+                  backgroundColor: "#fff",
+                  border: `1px dashed ${t.border}`,
+                  borderRadius: 8,
+                }}
+              >
+                <div style={{ marginBottom: 12, color: t.fgMuted }}>
+                  <Ic.Layers />
+                </div>
+                <p style={{ fontSize: 14, color: t.fgMuted, margin: "0 0 16px" }}>
+                  No containers yet
+                </p>
                 <Link
                   href={`/containers/new?namespace=${namespace.name}`}
-                  className="text-emerald-600 hover:underline"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "8px 16px",
+                    backgroundColor: t.accent,
+                    color: "#fff",
+                    borderRadius: 6,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    textDecoration: "none",
+                  }}
                 >
-                  Create the first container
+                  <Ic.Plus /> Create the first container
                 </Link>
               </div>
             ) : (
-              <div className="border border-[#30363d] rounded-lg divide-y divide-[#21262d]">
-                {sortedContainers.map((container) => {
-                  const tc = typeConfig[container.type] || typeConfig.product;
-                  return (
-                    <Link
-                      key={container.id}
-                      href={`/containers/${encodeURIComponent(container.id)}`}
-                      className="block px-4 py-4 hover:bg-gray-100 transition"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-3">
-                          <span className="text-xl mt-0.5">{tc.icon}</span>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-blue-400 hover:underline">
-                                {container.name}
-                              </span>
-                              {container.isVerified && (
-                                <span className="px-1.5 py-0.5 text-xs rounded bg-emerald-100 text-emerald-600 border border-emerald-300">
-                                  ✓ Verified
-                                </span>
-                              )}
-                              <span className="text-xs text-[#484f58]">v{container.version}</span>
-                            </div>
-                            {container.description && (
-                              <p className="text-sm text-[#8b949e] mt-1 line-clamp-1">{container.description}</p>
-                            )}
-                            <div className="flex items-center gap-4 mt-2 text-xs text-[#8b949e]">
-                              <span className={`px-2 py-0.5 rounded ${tc.bg} ${tc.text}`}>{container.type}</span>
-                              <span>{container.stats?.atoms || 0} atoms</span>
-                              <span>Updated {new Date(container.updatedAt).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-                        </div>
+              <div
+                style={{
+                  backgroundColor: "#fff",
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 8,
+                  overflow: "hidden",
+                }}
+              >
+                {sortedContainers.map((c, i) => (
+                  <Link
+                    key={c.uuid || c.id}
+                    href={`/containers/${c.uuid || c.id}`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "14px 16px",
+                      borderBottom:
+                        i < sortedContainers.length - 1 ? `1px solid ${t.border}` : "none",
+                      textDecoration: "none",
+                      color: t.fg,
+                      transition: "background 0.1s",
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontWeight: 600, fontSize: 14, color: t.link }}>
+                          {c.name || c.identifier}
+                        </span>
+                        {c.isVerified && (
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 3,
+                              padding: "0 6px",
+                              fontSize: 11,
+                              fontFamily: mono,
+                              lineHeight: "18px",
+                              borderRadius: 12,
+                              backgroundColor: "#dafbe1",
+                              border: "1px solid #aceebb",
+                              color: "#1a7f37",
+                            }}
+                          >
+                            <Ic.Shield s={10} /> verified
+                          </span>
+                        )}
+                        {c.version != null && (
+                          <span style={{ fontSize: 11, color: t.fgMuted, fontFamily: mono }}>
+                            v{c.version}
+                          </span>
+                        )}
                       </div>
-                    </Link>
-                  );
-                })}
+                      {c.description && (
+                        <p
+                          style={{
+                            fontSize: 13,
+                            color: t.fgMuted,
+                            margin: "4px 0 0",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {c.description}
+                        </p>
+                      )}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 16,
+                          marginTop: 6,
+                          fontSize: 12,
+                          color: t.fgMuted,
+                        }}
+                      >
+                        <span
+                          style={{
+                            padding: "0 6px",
+                            fontSize: 11,
+                            lineHeight: "18px",
+                            borderRadius: 10,
+                            backgroundColor: t.canvas,
+                            border: `1px solid ${t.border}`,
+                            textTransform: "capitalize",
+                          }}
+                        >
+                          {c.type}
+                        </span>
+                        <span>{c.stats?.atoms?.toLocaleString() || 0} atoms</span>
+                        <span style={{ fontFamily: mono, fontSize: 11, color: "#8b949e" }}>
+                          {new Date(c.updatedAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill={t.fgMuted}
+                      style={{ flexShrink: 0, marginLeft: 12 }}
+                    >
+                      <path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.751.751 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" />
+                    </svg>
+                  </Link>
+                ))}
               </div>
             )}
           </div>
 
           {/* Sidebar */}
-          <div className="w-80 flex-shrink-0 hidden lg:block">
-            <div className="space-y-6">
-              {/* About */}
-              <div className="border border-[#30363d] rounded-lg p-4">
-                <h3 className="font-semibold mb-3">About</h3>
-                <p className="text-sm text-[#8b949e]">
-                  {namespace.description || 'No description provided.'}
-                </p>
-                <div className="mt-4 space-y-2 text-sm">
-                  <div className="flex items-center gap-2 text-[#8b949e]">
-                    <span>🔓</span>
-                    <span className="capitalize">{namespace.visibility}</span>
+          <div style={{ width: 280, flexShrink: 0 }}>
+            {/* About */}
+            <Card>
+              <h3 style={{ fontSize: 14, fontWeight: 600, color: t.fg, margin: "0 0 12px" }}>
+                About
+              </h3>
+              <p style={{ fontSize: 13, color: t.fgMuted, margin: "0 0 16px", lineHeight: 1.5 }}>
+                {namespace.description || "No description provided."}
+              </p>
+              <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
+                {namespace.visibility && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, color: t.fgMuted }}>
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M4 4a4 4 0 0 1 8 0v2h.25c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 12.25 15h-8.5A1.75 1.75 0 0 1 2 13.25v-5.5C2 6.784 2.784 6 3.75 6H4Zm8.25 3.5h-8.5a.25.25 0 0 0-.25.25v5.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-5.5a.25.25 0 0 0-.25-.25ZM10.5 6V4a2.5 2.5 0 1 0-5 0v2Z" />
+                    </svg>
+                    <span style={{ textTransform: "capitalize" }}>{namespace.visibility}</span>
                   </div>
-                  {namespace.createdAt && (
-                    <div className="flex items-center gap-2 text-[#8b949e]">
-                      <span>📅</span>
-                      <span>Created {new Date(namespace.createdAt).toLocaleDateString()}</span>
-                    </div>
-                  )}
-                </div>
+                )}
+                {namespace.createdAt && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, color: t.fgMuted }}>
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M4.75 0a.75.75 0 0 1 .75.75V2h5V.75a.75.75 0 0 1 1.5 0V2h1.25c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 13.25 16H2.75A1.75 1.75 0 0 1 1 14.25V3.75C1 2.784 1.784 2 2.75 2H4V.75A.75.75 0 0 1 4.75 0ZM2.5 7.5v6.75c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25V7.5Zm10.75-4H2.75a.25.25 0 0 0-.25.25V6h11V3.75a.25.25 0 0 0-.25-.25Z" />
+                    </svg>
+                    <span>Created {new Date(namespace.createdAt).toLocaleDateString()}</span>
+                  </div>
+                )}
               </div>
+            </Card>
 
-              {/* Members */}
-              {namespace.members.length > 0 && (
-                <div className="border border-[#30363d] rounded-lg p-4">
-                  <h3 className="font-semibold mb-3">Members</h3>
-                  <div className="space-y-2">
+            {/* Members */}
+            {namespace.members && namespace.members.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <Card>
+                  <h3 style={{ fontSize: 14, fontWeight: 600, color: t.fg, margin: "0 0 12px" }}>
+                    Members
+                  </h3>
+                  <div style={{ display: "grid", gap: 8 }}>
                     {namespace.members.map((member, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-full flex items-center justify-center text-xs font-bold">
-                          {(member.user_name || member.email || 'U').charAt(0).toUpperCase()}
+                      <div key={idx} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: "50%",
+                            background: "linear-gradient(135deg, #238636, #0969da)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color: "#fff",
+                          }}
+                        >
+                          {(member.user_name || member.email || "U").charAt(0).toUpperCase()}
                         </div>
-                        <span className="text-sm">{member.user_name || member.email || member.user_id}</span>
-                        <span className="text-xs text-[#484f58] capitalize">{member.role}</span>
+                        <span style={{ fontSize: 13, color: t.fg, flex: 1 }}>
+                          {member.user_name || member.email || member.user_id}
+                        </span>
+                        <span
+                          style={{ fontSize: 11, color: t.fgMuted, textTransform: "capitalize" }}
+                        >
+                          {member.role}
+                        </span>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                </Card>
+              </div>
+            )}
 
-              {/* Quick Actions */}
-              <div className="border border-[#30363d] rounded-lg p-4">
-                <h3 className="font-semibold mb-3">Quick Actions</h3>
-                <div className="space-y-2">
+            {/* Quick Actions */}
+            <div style={{ marginTop: 16 }}>
+              <Card>
+                <h3 style={{ fontSize: 14, fontWeight: 600, color: t.fg, margin: "0 0 12px" }}>
+                  Quick Actions
+                </h3>
+                <div style={{ display: "grid", gap: 8 }}>
                   <Link
                     href={`/containers/new?namespace=${namespace.name}`}
-                    className="flex items-center gap-2 text-sm text-[#8b949e] hover:text-gray-900 transition"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      fontSize: 13,
+                      color: t.fgMuted,
+                      textDecoration: "none",
+                    }}
                   >
-                    <span>➕</span> New Container
+                    <Ic.Plus /> New Container
                   </Link>
                   <Link
                     href={`/inject?namespace=${namespace.name}`}
-                    className="flex items-center gap-2 text-sm text-[#8b949e] hover:text-gray-900 transition"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      fontSize: 13,
+                      color: t.fgMuted,
+                      textDecoration: "none",
+                    }}
                   >
-                    <span>💉</span> Inject All
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M8.22 2.97a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042l2.97-2.97H3.75a.75.75 0 0 1 0-1.5h7.44L8.22 4.03a.75.75 0 0 1 0-1.06Z" />
+                    </svg>
+                    Inject All
                   </Link>
                 </div>
-              </div>
+              </Card>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }

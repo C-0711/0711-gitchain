@@ -13,7 +13,14 @@
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
   },
-  "keywords": ["gitchain", "types", "schema", "validation", "ai", "context"],
+  "keywords": [
+    "gitchain",
+    "types",
+    "schema",
+    "validation",
+    "ai",
+    "context"
+  ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -23,9 +30,14 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
+    "test": "jest --config ../../jest.config.js --selectProjects core",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

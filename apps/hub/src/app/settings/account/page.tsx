@@ -1,32 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const t = {
-  fg: "#1f2328",
-  fgMuted: "#656d76",
-  border: "#d1d9e0",
-  green: "#1a7f37",
-  greenBg: "#dafbe1",
-  red: "#cf222e",
-  redBg: "#ffebe9",
-};
+import { theme as t } from "@/components/AppShell";
+
+interface User {
+  email: string;
+  username: string;
+  name: string;
+}
 
 export default function AccountSettingsPage() {
-  const [passwords, setPasswords] = useState({ current: "", new: "", confirm: "" });
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [username, setUsername] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleteText, setDeleteText] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
-  const handlePasswordChange = async (e: React.FormEvent) => {
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (token) {
+      fetch("/api/user", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          setUser(data);
+          setUsername(data.username || "");
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleUsernameChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (passwords.new !== passwords.confirm) {
-      setMessage({ type: "error", text: "New passwords do not match" });
+    if (!username.trim()) {
+      setMessage({ type: "error", text: "Username cannot be empty" });
       return;
     }
-
-    if (passwords.new.length < 8) {
-      setMessage({ type: "error", text: "Password must be at least 8 characters" });
+    if (username === user?.username) {
+      setMessage({ type: "error", text: "Username is unchanged" });
       return;
     }
 
@@ -34,50 +53,170 @@ export default function AccountSettingsPage() {
     setMessage({ type: "", text: "" });
 
     const token = localStorage.getItem("token");
-    const res = await fetch("/api/user/password", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        currentPassword: passwords.current,
-        newPassword: passwords.new,
-      }),
-    });
+    try {
+      const res = await fetch("/api/user", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ username }),
+      });
 
-    const data = await res.json();
-    if (res.ok) {
-      setMessage({ type: "success", text: "Password updated successfully!" });
-      setPasswords({ current: "", new: "", confirm: "" });
-    } else {
-      setMessage({ type: "error", text: data.error || "Failed to update password" });
+      const data = await res.json();
+      if (res.ok) {
+        setUser((prev) => (prev ? { ...prev, username } : prev));
+        setMessage({ type: "success", text: "Username updated successfully!" });
+      } else {
+        setMessage({ type: "error", text: data.error || "Failed to update username" });
+      }
+    } catch {
+      setMessage({ type: "error", text: "Network error. Please try again." });
     }
     setSaving(false);
   };
 
+  const handleDeleteAccount = async () => {
+    if (deleteText !== user?.username) return;
+
+    setDeleting(true);
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch("/api/user", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        localStorage.removeItem("token");
+        window.location.href = "/auth/login";
+      } else {
+        const data = await res.json();
+        setMessage({ type: "error", text: data.error || "Failed to delete account" });
+        setDeleting(false);
+      }
+    } catch {
+      setMessage({ type: "error", text: "Network error. Please try again." });
+      setDeleting(false);
+    }
+  };
+
+  if (loading) {
+    return <div style={{ textAlign: "center", padding: 60, color: t.fgMuted }}>Loading...</div>;
+  }
+
+  if (!user) {
+    return (
+      <div
+        style={{
+          textAlign: "center",
+          padding: 40,
+          color: t.fgMuted,
+          backgroundColor: "#fff",
+          border: `1px solid ${t.border}`,
+          borderRadius: 8,
+        }}
+      >
+        Please log in to view account settings.{" "}
+        <a href="/auth/login" style={{ color: t.link }}>
+          Sign in
+        </a>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 24 }}>Account settings</h2>
+      <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 24, color: t.fg }}>
+        Account settings
+      </h2>
 
-      {/* Change Password */}
-      <div style={{
-        padding: 20,
-        border: `1px solid ${t.border}`,
-        borderRadius: 8,
-        marginBottom: 24,
-      }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Change password</h3>
-        
-        <form onSubmit={handlePasswordChange}>
+      {/* Email (read-only) */}
+      <div
+        style={{
+          padding: 20,
+          border: `1px solid ${t.border}`,
+          borderRadius: 8,
+          marginBottom: 24,
+          backgroundColor: "#fff",
+        }}
+      >
+        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: t.fg }}>
+          Email address
+        </h3>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill={t.fgMuted}>
+            <path d="M1.75 2h12.5c.966 0 1.75.784 1.75 1.75v8.5A1.75 1.75 0 0 1 14.25 14H1.75A1.75 1.75 0 0 1 0 12.25v-8.5C0 2.784.784 2 1.75 2ZM1.5 3.75v8.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25v-8.5a.25.25 0 0 0-.25-.25H1.75a.25.25 0 0 0-.25.25Zm.72-.97 5.656 4.129a.25.25 0 0 0 .248 0L13.78 2.78l-.86-.86L8 5.648 3.14 1.92Z" />
+          </svg>
+          <span
+            style={{
+              fontSize: 14,
+              color: t.fg,
+              padding: "8px 12px",
+              backgroundColor: "#f6f8fa",
+              border: `1px solid ${t.border}`,
+              borderRadius: 6,
+              flex: 1,
+              maxWidth: 400,
+            }}
+          >
+            {user.email || "No email set"}
+          </span>
+          <span
+            style={{
+              fontSize: 12,
+              color: t.fgMuted,
+              padding: "4px 8px",
+              backgroundColor: "#f6f8fa",
+              border: `1px solid ${t.border}`,
+              borderRadius: 12,
+            }}
+          >
+            Read-only
+          </span>
+        </div>
+        <p style={{ fontSize: 12, color: t.fgMuted, marginTop: 8, marginBottom: 0 }}>
+          Your email is used for notifications and account recovery. Contact an administrator to
+          change it.
+        </p>
+      </div>
+
+      {/* Username change */}
+      <div
+        style={{
+          padding: 20,
+          border: `1px solid ${t.border}`,
+          borderRadius: 8,
+          marginBottom: 24,
+          backgroundColor: "#fff",
+        }}
+      >
+        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: t.fg }}>
+          Change username
+        </h3>
+        <form onSubmit={handleUsernameChange}>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 14, fontWeight: 500, marginBottom: 6 }}>
-              Current password
+            <label
+              style={{
+                display: "block",
+                fontSize: 14,
+                fontWeight: 500,
+                marginBottom: 6,
+                color: t.fg,
+              }}
+            >
+              Username
             </label>
             <input
-              type="password"
-              value={passwords.current}
-              onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               style={{
                 width: "100%",
                 maxWidth: 300,
@@ -85,107 +224,153 @@ export default function AccountSettingsPage() {
                 border: `1px solid ${t.border}`,
                 borderRadius: 6,
                 fontSize: 14,
+                color: t.fg,
               }}
             />
-          </div>
-
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 14, fontWeight: 500, marginBottom: 6 }}>
-              New password
-            </label>
-            <input
-              type="password"
-              value={passwords.new}
-              onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
-              style={{
-                width: "100%",
-                maxWidth: 300,
-                padding: "8px 12px",
-                border: `1px solid ${t.border}`,
-                borderRadius: 6,
-                fontSize: 14,
-              }}
-            />
-          </div>
-
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 14, fontWeight: 500, marginBottom: 6 }}>
-              Confirm new password
-            </label>
-            <input
-              type="password"
-              value={passwords.confirm}
-              onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
-              style={{
-                width: "100%",
-                maxWidth: 300,
-                padding: "8px 12px",
-                border: `1px solid ${t.border}`,
-                borderRadius: 6,
-                fontSize: 14,
-              }}
-            />
+            <p style={{ fontSize: 12, color: t.fgMuted, marginTop: 4, marginBottom: 0 }}>
+              Your username appears in your container URLs (e.g., /{username}/container-name)
+            </p>
           </div>
 
           {message.text && (
-            <div style={{
-              padding: "12px 16px",
-              backgroundColor: message.type === "success" ? t.greenBg : t.redBg,
-              color: message.type === "success" ? t.green : t.red,
-              borderRadius: 6,
-              marginBottom: 16,
-              fontSize: 14,
-            }}>
+            <div
+              style={{
+                padding: "12px 16px",
+                backgroundColor: message.type === "success" ? "#dafbe1" : "#ffebe9",
+                color: message.type === "success" ? "#1a7f37" : "#cf222e",
+                borderRadius: 6,
+                marginBottom: 16,
+                fontSize: 14,
+              }}
+            >
               {message.text}
             </div>
           )}
 
           <button
             type="submit"
-            disabled={saving || !passwords.current || !passwords.new}
+            disabled={saving || !username.trim() || username === user.username}
             style={{
               padding: "10px 20px",
-              backgroundColor: t.green,
+              backgroundColor: "#238636",
               color: "#fff",
               border: "none",
               borderRadius: 6,
               fontSize: 14,
               fontWeight: 500,
-              cursor: saving ? "not-allowed" : "pointer",
-              opacity: saving || !passwords.current || !passwords.new ? 0.7 : 1,
+              cursor:
+                saving || !username.trim() || username === user.username
+                  ? "not-allowed"
+                  : "pointer",
+              opacity: saving || !username.trim() || username === user.username ? 0.7 : 1,
             }}
           >
-            {saving ? "Updating..." : "Update password"}
+            {saving ? "Updating..." : "Update username"}
           </button>
         </form>
       </div>
 
-      {/* Danger Zone */}
-      <div style={{
-        padding: 20,
-        border: `1px solid ${t.red}`,
-        borderRadius: 8,
-        backgroundColor: t.redBg,
-      }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, color: t.red, marginBottom: 8 }}>
+      {/* Danger Zone - Delete Account */}
+      <div
+        style={{
+          padding: 20,
+          border: "1px solid #cf222e",
+          borderRadius: 8,
+          backgroundColor: "#fff",
+        }}
+      >
+        <h3 style={{ fontSize: 16, fontWeight: 600, color: "#cf222e", marginBottom: 8 }}>
           Danger zone
         </h3>
         <p style={{ fontSize: 14, color: t.fgMuted, marginBottom: 16 }}>
-          Once you delete your account, there is no going back. Please be certain.
+          Deleting your account is permanent. All your containers, tokens, and data will be removed
+          and cannot be recovered.
         </p>
-        <button
-          style={{
-            padding: "8px 16px",
-            backgroundColor: "transparent",
-            color: t.red,
-            border: `1px solid ${t.red}`,
-            borderRadius: 6,
-            fontSize: 14,
-            cursor: "pointer",
-          }}
-        >
-          Delete account
-        </button>
+
+        {!deleteConfirm ? (
+          <button
+            onClick={() => setDeleteConfirm(true)}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "transparent",
+              color: "#cf222e",
+              border: "1px solid #cf222e",
+              borderRadius: 6,
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: "pointer",
+            }}
+          >
+            Delete your account
+          </button>
+        ) : (
+          <div
+            style={{
+              padding: 16,
+              backgroundColor: "#ffebe9",
+              borderRadius: 6,
+              border: "1px solid #cf222e",
+            }}
+          >
+            <p style={{ fontSize: 14, color: "#cf222e", fontWeight: 500, marginBottom: 12 }}>
+              Are you absolutely sure?
+            </p>
+            <p style={{ fontSize: 13, color: t.fgMuted, marginBottom: 12 }}>
+              Please type <strong style={{ color: t.fg }}>{user.username}</strong> to confirm.
+            </p>
+            <input
+              type="text"
+              value={deleteText}
+              onChange={(e) => setDeleteText(e.target.value)}
+              placeholder="Enter your username"
+              style={{
+                width: "100%",
+                maxWidth: 300,
+                padding: "8px 12px",
+                border: "1px solid #cf222e",
+                borderRadius: 6,
+                fontSize: 14,
+                marginBottom: 12,
+                color: t.fg,
+              }}
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteText !== user.username || deleting}
+                style={{
+                  padding: "8px 16px",
+                  backgroundColor: deleteText === user.username ? "#cf222e" : t.border,
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 6,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: deleteText === user.username && !deleting ? "pointer" : "not-allowed",
+                }}
+              >
+                {deleting ? "Deleting..." : "I understand, delete my account"}
+              </button>
+              <button
+                onClick={() => {
+                  setDeleteConfirm(false);
+                  setDeleteText("");
+                }}
+                style={{
+                  padding: "8px 16px",
+                  backgroundColor: "transparent",
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 6,
+                  fontSize: 14,
+                  cursor: "pointer",
+                  color: t.fg,
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

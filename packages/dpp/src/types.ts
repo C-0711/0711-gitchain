@@ -2,6 +2,12 @@
  * Digital Product Passport types
  */
 
+/** Verification status for a passport */
+export type VerificationStatus = "valid" | "invalid" | "expired";
+
+/** Maximum passport age in milliseconds (default: 1 year) */
+export const DEFAULT_PASSPORT_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000;
+
 export interface DPPConfig {
   /** Base URL for DPP links */
   baseUrl: string;
@@ -71,6 +77,7 @@ export interface ProductPassport {
     chainId: string;
     batchId: number;
     merkleRoot: string;
+    contentHash: string;
     txHash?: string;
     timestamp: string;
   };
@@ -85,7 +92,11 @@ export interface ProductPassport {
 
 export interface PassportVerification {
   valid: boolean;
+  status: VerificationStatus;
   passport: ProductPassport;
+  contentHashMatch: boolean;
+  timestampValid: boolean;
+  merkleRootValid: boolean;
   chain: {
     verified: boolean;
     network: string;
@@ -96,4 +107,5 @@ export interface PassportVerification {
     documentId: string;
     confidence: string;
   }>;
+  errors: string[];
 }

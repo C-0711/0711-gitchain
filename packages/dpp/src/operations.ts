@@ -2,8 +2,9 @@
  * DPP convenience functions
  */
 
-import { getDPPService } from "./service.js";
 import type { Container } from "@0711/core";
+
+import { getDPPService } from "./service.js";
 import type { DPPConfig, ProductPassport, PassportVerification } from "./types.js";
 
 /**
@@ -21,20 +22,28 @@ export async function createPassport(
  * Verify a Digital Product Passport
  */
 export async function verifyPassport(
-  passportId: string,
+  passport: ProductPassport,
   config?: Partial<DPPConfig>
 ): Promise<PassportVerification> {
   const service = getDPPService(config);
-  return service.verifyPassport(passportId);
+  return service.verifyPassport(passport);
+}
+
+/**
+ * Generate a QR code SVG for a passport
+ */
+export async function generateQRCode(
+  passportId: string,
+  config?: Partial<DPPConfig>
+): Promise<string> {
+  const service = getDPPService(config);
+  return service.generateQRCode(passportId);
 }
 
 /**
  * Get passport URL
  */
-export function getPassportUrl(
-  passportId: string,
-  config?: Partial<DPPConfig>
-): string {
+export function getPassportUrl(passportId: string, config?: Partial<DPPConfig>): string {
   const service = getDPPService(config);
   return service.getPassportUrl(passportId);
 }

@@ -68,11 +68,11 @@ class GitChainClient {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: "Unknown error" }));
+      const error = (await response.json().catch(() => ({ error: "Unknown error" }))) as any;
       throw new Error(error.error?.message || error.error || `HTTP ${response.status}`);
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   }
 
   async inject(containerIds: string[], options?: { format?: string; verify?: boolean }) {
@@ -197,7 +197,9 @@ const SearchSchema = z.object({
 });
 
 const GetContainerSchema = z.object({
-  id: z.string().describe("Container ID (UUID or full container_id like '0711:product:bosch:123:v1')"),
+  id: z
+    .string()
+    .describe("Container ID (UUID or full container_id like '0711:product:bosch:123:v1')"),
 });
 
 const ListContainersSchema = z.object({
@@ -496,4 +498,4 @@ export function createGitChainMcpServer(config?: Partial<GitChainMcpConfig>): Se
 // EXPORTS
 // ============================================
 
-export { GitChainClient, GitChainMcpConfig };
+export { GitChainClient };

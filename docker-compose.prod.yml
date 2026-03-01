@@ -20,7 +20,8 @@ services:
       POSTGRES_DB: gitchain
     volumes:
       - gitchain-pgdata:/var/lib/postgresql/data
-      - ./database/migrations:/docker-entrypoint-initdb.d:ro
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
+      - ./database/migrations:/docker-entrypoint-initdb.d/migrations:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U gitchain -d gitchain"]
       interval: 10s
@@ -79,13 +80,16 @@ services:
       dockerfile: apps/api/Dockerfile
     container_name: gitchain-api
     restart: unless-stopped
+    ports:
+      - "3100:3000"
     environment:
       NODE_ENV: production
       PORT: 3000
       DATABASE_URL: postgresql://gitchain:${DATABASE_PASSWORD}@postgres:5432/gitchain
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
-      API_KEY_SALT: ${API_KEY_SALT:-default-salt-change-me}
+      API_KEY_SALT: ${API_KEY_SALT:?API_KEY_SALT is required}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3001}
       GITCHAIN_DATA_DIR: /data/repos
       # Blockchain (optional)
       BASE_MAINNET_RPC: ${BASE_MAINNET_RPC:-https://mainnet.base.org}
@@ -102,7 +106,13 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -131,6 +141,8 @@ services:
       dockerfile: apps/hub/Dockerfile
     container_name: gitchain-hub
     restart: unless-stopped
+    ports:
+      - "3001:3000"
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -148,7 +160,13 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3

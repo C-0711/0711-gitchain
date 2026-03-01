@@ -1,20 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
-import AppShell from '@/components/AppShell';
-import UserCard from '@/components/UserCard';
-import SocialActions from '@/components/SocialActions';
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useState, useEffect } from "react";
 
-const t = {
-  bg: "#ffffff",
-  border: "#d0d7de",
-  borderLight: "#eaeef2",
-  fg: "#1f2328",
-  fgMuted: "#656d76",
-  link: "#0969da",
-};
+import AppShell, { PageHeader, Card, theme as t } from "@/components/AppShell";
+
+const mono = "'SFMono-Regular','Consolas','Liberation Mono','Menlo',monospace";
 
 interface User {
   id: string;
@@ -24,263 +16,319 @@ interface User {
   location?: string;
   company?: string;
   createdAt?: string;
-  viewerIsFollowing: boolean;
 }
 
-interface Container {
-  id: string;
-  identifier: string;
-  name: string;
-  visibility: string;
-  starCount: number;
-  watchCount: number;
-  forkCount: number;
-  viewerHasStarred: boolean;
-  viewerWatchLevel?: string;
-  owner: {
-    id: string;
-    username: string;
-  };
+// Icons
+const Ic = {
+  Star: () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z" />
+    </svg>
+  ),
+  Back: () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M7.78 12.53a.75.75 0 0 1-1.06 0L2.47 8.28a.75.75 0 0 1 0-1.06l4.25-4.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042L4.81 7h7.44a.75.75 0 0 1 0 1.5H4.81l2.97 2.97a.75.75 0 0 1 0 1.06Z" />
+    </svg>
+  ),
+  Location: () => (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+      <path d="m12.596 11.596-3.535 3.536a1.5 1.5 0 0 1-2.122 0l-3.535-3.536a6.5 6.5 0 1 1 9.192 0ZM8 14.5l3.536-3.536a5 5 0 1 0-7.072 0Zm0-8.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" />
+    </svg>
+  ),
+};
+
+function UserGridCard({ user }: { user: User }) {
+  const [hover, setHover] = useState(false);
+  const initial = (user.name || user.username || "?").charAt(0).toUpperCase();
+
+  return (
+    <Link
+      href={`/users/${user.username}`}
+      style={{
+        display: "block",
+        backgroundColor: "#fff",
+        border: `1px solid ${hover ? t.border : "#eaeef2"}`,
+        borderRadius: 8,
+        padding: 20,
+        textDecoration: "none",
+        transition: "all 0.15s",
+        boxShadow: hover ? "0 3px 12px rgba(0,0,0,0.04)" : "none",
+      }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          textAlign: "center",
+          gap: 10,
+        }}
+      >
+        {/* Avatar (letter circle) */}
+        <div
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, #238636 0%, #0969da 100%)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 22,
+            fontWeight: 700,
+            color: "#fff",
+            border: `2px solid ${t.border}`,
+          }}
+        >
+          {initial}
+        </div>
+
+        {/* Name */}
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: t.fg }}>
+            {user.name || user.username}
+          </div>
+          <div style={{ fontSize: 13, color: t.fgMuted, fontFamily: mono }}>@{user.username}</div>
+        </div>
+
+        {/* Location */}
+        {user.location && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              fontSize: 12,
+              color: t.fgMuted,
+            }}
+          >
+            <Ic.Location />
+            {user.location}
+          </div>
+        )}
+
+        {/* Company */}
+        {user.company && <div style={{ fontSize: 12, color: t.fgMuted }}>{user.company}</div>}
+      </div>
+    </Link>
+  );
 }
 
 export default function StargazersPage() {
   const params = useParams();
-  const containerId = typeof params.id === 'string' ? decodeURIComponent(params.id) : '';
+  const id = params.id as string;
+  const containerId = decodeURIComponent(id);
 
-  const [container, setContainer] = useState<Container | null>(null);
   const [stargazers, setStargazers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
-  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
-    async function fetchData() {
-      if (!containerId) return;
-      setLoading(true);
-      try {
-        // Fetch container info
-        const containerRes = await fetch(`/api/containers/${encodeURIComponent(containerId)}`);
-        if (containerRes.ok) {
-          const containerData = await containerRes.json();
-          setContainer(containerData);
-        }
-
-        // Fetch stargazers
-        const stargazersRes = await fetch(
-          `/api/containers/${encodeURIComponent(containerId)}/stargazers?page=${page}&limit=30`
-        );
-        if (stargazersRes.ok) {
-          const data = await stargazersRes.json();
-          setStargazers(data.stargazers || []);
-          setTotalCount(data.total || 0);
-          setHasMore(data.hasMore || false);
-        }
-      } catch (e) {
-        console.error('Failed to fetch stargazers:', e);
-      } finally {
+    setLoading(true);
+    const token = localStorage.getItem("token");
+    fetch(`/api/containers/${encodeURIComponent(containerId)}/stargazers?page=${page}&limit=30`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error(`Failed to load stargazers (${r.status})`);
+        return r.json();
+      })
+      .then((data) => {
+        setStargazers(data.stargazers || []);
+        setTotalCount(data.total || 0);
+        setHasMore(data.hasMore || false);
         setLoading(false);
-      }
-    }
-    fetchData();
+      })
+      .catch((err) => {
+        setError(err.message);
+        setLoading(false);
+      });
   }, [containerId, page]);
-
-  const formatCount = (n: number): string => {
-    if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
-    return n.toString();
-  };
 
   return (
     <AppShell>
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 24px' }}>
-        {/* Container header */}
-        {container && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '16px 0',
-            borderBottom: `1px solid ${t.borderLight}`,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill={t.fgMuted}>
-                <path d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.495 2.495 0 0 1 2 11.5Z"/>
-              </svg>
-              <Link
-                href={`/users/${container.owner.username}`}
-                style={{ color: t.link, textDecoration: 'none', fontSize: 16 }}
-              >
-                {container.owner.username}
-              </Link>
-              <span style={{ color: t.fgMuted }}>/</span>
-              <Link
-                href={`/containers/${encodeURIComponent(container.identifier)}`}
-                style={{ color: t.link, textDecoration: 'none', fontSize: 16, fontWeight: 600 }}
-              >
-                {container.name || container.identifier}
-              </Link>
-              <span style={{
-                fontSize: 11,
-                padding: '0 6px',
-                borderRadius: 12,
-                border: `1px solid ${t.border}`,
-                color: t.fgMuted,
-              }}>
-                {container.visibility}
-              </span>
-            </div>
-            <SocialActions
-              containerId={container.id}
-              initialStarCount={container.starCount}
-              initialWatchCount={container.watchCount}
-              initialForkCount={container.forkCount}
-              initialHasStarred={container.viewerHasStarred}
-              initialWatchLevel={container.viewerWatchLevel || null}
-              size="sm"
-            />
-          </div>
-        )}
-
-        {/* Page header */}
-        <div style={{ padding: '24px 0' }}>
-          <h1 style={{ fontSize: 24, fontWeight: 400, color: t.fg, margin: 0 }}>
-            Stargazers
-          </h1>
-        </div>
-
-        {/* Tabs */}
-        <div style={{
-          display: 'flex',
-          borderBottom: `1px solid ${t.border}`,
-          marginBottom: 0,
-        }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 24px" }}>
+        {/* Breadcrumb */}
+        <div
+          style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, fontSize: 14 }}
+        >
           <Link
-            href={`/containers/${encodeURIComponent(containerId)}/stargazers`}
+            href={`/containers/${encodeURIComponent(containerId)}`}
             style={{
-              padding: '8px 16px',
-              fontSize: 14,
-              fontWeight: 600,
-              color: t.fg,
-              textDecoration: 'none',
-              borderBottom: `2px solid #fd8c73`,
-              marginBottom: -1,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              color: t.link,
+              textDecoration: "none",
             }}
           >
-            All
-            <span style={{
-              marginLeft: 6,
-              padding: '0 6px',
-              fontSize: 12,
-              backgroundColor: '#eaeef2',
-              borderRadius: 10,
-              color: t.fgMuted,
-            }}>
-              {formatCount(totalCount)}
-            </span>
+            <Ic.Back /> {containerId}
           </Link>
-          <Link
-            href={`/containers/${encodeURIComponent(containerId)}/stargazers/you_know`}
-            style={{
-              padding: '8px 16px',
-              fontSize: 14,
-              fontWeight: 400,
-              color: t.fgMuted,
-              textDecoration: 'none',
-              borderBottom: '2px solid transparent',
-              marginBottom: -1,
-            }}
-          >
-            You know
-          </Link>
+          <span style={{ color: t.fgMuted }}>/</span>
+          <span style={{ color: t.fg, fontWeight: 600 }}>Stargazers</span>
         </div>
 
-        {/* Stargazers list */}
-        <div style={{
-          border: `1px solid ${t.border}`,
-          borderTop: 'none',
-          backgroundColor: t.bg,
-        }}>
-          {loading ? (
-            <div style={{ padding: 48, textAlign: 'center', color: t.fgMuted }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
+          <span style={{ color: "#e3b341" }}>
+            <Ic.Star />
+          </span>
+          <PageHeader
+            title="Stargazers"
+            description={
+              loading
+                ? "Loading stargazers..."
+                : `${totalCount} user${totalCount !== 1 ? "s" : ""} starred this container`
+            }
+          />
+        </div>
+
+        {/* Loading State */}
+        {loading && (
+          <Card>
+            <div style={{ textAlign: "center", padding: 48, color: t.fgMuted, fontSize: 14 }}>
               Loading stargazers...
             </div>
-          ) : stargazers.length === 0 ? (
-            <div style={{ padding: 48, textAlign: 'center' }}>
-              <svg width="48" height="48" viewBox="0 0 16 16" fill={t.fgMuted} style={{ marginBottom: 16 }}>
-                <path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/>
-              </svg>
-              <h3 style={{ fontSize: 18, fontWeight: 600, color: t.fg, margin: '0 0 8px' }}>
+          </Card>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <Card>
+            <div style={{ textAlign: "center", padding: 48 }}>
+              <div style={{ fontSize: 14, color: "#cf222e", marginBottom: 12 }}>{error}</div>
+              <button
+                onClick={() => {
+                  setError(null);
+                  setLoading(true);
+                  setPage(1);
+                }}
+                style={{
+                  padding: "6px 16px",
+                  fontSize: 13,
+                  backgroundColor: "#fff",
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 6,
+                  color: t.fg,
+                  cursor: "pointer",
+                }}
+              >
+                Retry
+              </button>
+            </div>
+          </Card>
+        )}
+
+        {/* Empty State */}
+        {!loading && !error && stargazers.length === 0 && (
+          <Card>
+            <div style={{ textAlign: "center", padding: 48 }}>
+              <div style={{ color: t.fgMuted, marginBottom: 12 }}>
+                <svg width="48" height="48" viewBox="0 0 16 16" fill={t.fgMuted}>
+                  <path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z" />
+                </svg>
+              </div>
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: t.fg, margin: "0 0 8px" }}>
                 No stargazers yet
               </h3>
-              <p style={{ fontSize: 14, color: t.fgMuted, maxWidth: 400, margin: '0 auto' }}>
-                Be the first to star this container!
-              </p>
+              <p style={{ fontSize: 14, color: t.fgMuted }}>Be the first to star this container!</p>
             </div>
-          ) : (
-            <>
-              {stargazers.map(user => (
-                <UserCard
-                  key={user.id}
-                  id={user.id}
-                  username={user.username}
-                  name={user.name}
-                  avatarUrl={user.avatarUrl}
-                  location={user.location}
-                  company={user.company}
-                  joinedAt={user.createdAt}
-                  isFollowing={user.viewerIsFollowing}
-                  showFollowButton={true}
-                />
+          </Card>
+        )}
+
+        {/* Stargazers Grid */}
+        {!loading && !error && stargazers.length > 0 && (
+          <>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                gap: 16,
+              }}
+            >
+              {stargazers.map((user) => (
+                <UserGridCard key={user.id} user={user} />
               ))}
+            </div>
 
-              {/* Pagination */}
-              {(page > 1 || hasMore) && (
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'center',
+            {/* Pagination */}
+            {(page > 1 || hasMore) && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
                   gap: 8,
-                  padding: 16,
-                  borderTop: `1px solid ${t.borderLight}`,
-                }}>
-                  {page > 1 && (
-                    <button
-                      onClick={() => setPage(p => p - 1)}
-                      style={{
-                        padding: '6px 12px',
-                        fontSize: 14,
-                        color: t.link,
-                        backgroundColor: 'transparent',
-                        border: `1px solid ${t.border}`,
-                        borderRadius: 6,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Previous
-                    </button>
-                  )}
-                  {hasMore && (
-                    <button
-                      onClick={() => setPage(p => p + 1)}
-                      style={{
-                        padding: '6px 12px',
-                        fontSize: 14,
-                        color: t.link,
-                        backgroundColor: 'transparent',
-                        border: `1px solid ${t.border}`,
-                        borderRadius: 6,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Next
-                    </button>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+                  marginTop: 32,
+                }}
+              >
+                {page > 1 && (
+                  <button
+                    onClick={() => setPage((p) => p - 1)}
+                    style={{
+                      padding: "6px 16px",
+                      fontSize: 14,
+                      color: t.link,
+                      backgroundColor: "#fff",
+                      border: `1px solid ${t.border}`,
+                      borderRadius: 6,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Previous
+                  </button>
+                )}
+                <span
+                  style={{
+                    padding: "6px 12px",
+                    fontSize: 14,
+                    color: t.fgMuted,
+                  }}
+                >
+                  Page {page}
+                </span>
+                {hasMore && (
+                  <button
+                    onClick={() => setPage((p) => p + 1)}
+                    style={{
+                      padding: "6px 16px",
+                      fontSize: 14,
+                      color: t.link,
+                      backgroundColor: "#fff",
+                      border: `1px solid ${t.border}`,
+                      borderRadius: 6,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Next
+                  </button>
+                )}
+              </div>
+            )}
+          </>
+        )}
 
-        <div style={{ height: 48 }} />
+        {/* Back link */}
+        {!loading && (
+          <div style={{ marginTop: 24 }}>
+            <Link
+              href={`/containers/${encodeURIComponent(containerId)}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 14,
+                color: t.fgMuted,
+                textDecoration: "none",
+              }}
+            >
+              <Ic.Back /> Back to container
+            </Link>
+          </div>
+        )}
       </div>
     </AppShell>
   );

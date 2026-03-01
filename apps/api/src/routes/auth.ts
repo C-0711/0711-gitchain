@@ -1,10 +1,11 @@
 /**
  * GitChain Auth Routes
- * 
+ *
  * Authentication endpoints.
  */
 
 import { Router, Request, Response, NextFunction } from "express";
+
 import { AuthService } from "../services/auth.js";
 
 export function createAuthRouter(authService: AuthService): Router {
@@ -87,7 +88,10 @@ export function createAuthRouter(authService: AuthService): Router {
    */
   router.post("/logout", async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // If using session tokens, revoke them here
+      const user = (req as any).user;
+      if (user) {
+        await authService.revokeAllSessions(user.id);
+      }
       res.json({ message: "Logged out successfully" });
     } catch (err) {
       next(err);

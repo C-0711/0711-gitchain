@@ -39,6 +39,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "test": "jest --config ../../jest.config.js --selectProjects inject",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

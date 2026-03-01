@@ -1,185 +1,271 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useState } from "react";
+
+import AppShell, { PageHeader, Card, SectionTitle, theme as t } from "@/components/AppShell";
+
+const mono = "'SFMono-Regular','Consolas','Liberation Mono','Menlo',monospace";
 
 export default function NewOrganizationPage() {
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [description, setDescription] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const [formData, setFormData] = useState({
-    name: "",
-    slug: "",
-    description: "",
-    website: "",
-  });
-
-  // Auto-generate slug from name
-  const handleNameChange = (name: string) => {
-    const slug = name
+  const handleNameChange = (value: string) => {
+    setName(value);
+    const generated = value
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
-    setFormData({ ...formData, name, slug });
+    setSlug(generated);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setIsSubmitting(true);
+    setError("");
+    setLoading(true);
 
     try {
-      const token = localStorage.getItem("gitchain_token");
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
       if (!token) {
         router.push("/auth/login?redirect=/orgs/new");
         return;
       }
 
-      const response = await fetch("/api/organizations", {
+      const res = await fetch("/api/organizations", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ name, slug, description }),
       });
 
-      const result = await response.json();
+      const data = await res.json();
 
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to create organization");
+      if (!res.ok) {
+        setError(data.error || "Failed to create organization");
+        return;
       }
 
-      router.push(`/orgs/${result.organization.slug}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      router.push(`/orgs/${data.organization?.slug || slug}`);
+    } catch {
+      setError("Network error. Please try again.");
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#0d1117]">
-      {/* Header */}
-      <div className="border-b border-[#30363d] bg-[#161b22]">
-        <div className="max-w-2xl mx-auto px-6 py-6">
-          <h1 className="text-2xl font-semibold text-white">Create a new organization</h1>
-          <p className="text-[#8b949e] mt-1">
-            Organizations let you collaborate with your team on containers.
-          </p>
-        </div>
-      </div>
+    <AppShell>
+      <div style={{ maxWidth: 600, margin: "0 auto", padding: "32px 24px" }}>
+        <PageHeader
+          title="Create a new organization"
+          description="Organizations let you collaborate with your team on containers."
+        />
 
-      {/* Form */}
-      <div className="max-w-2xl mx-auto px-6 py-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit}>
           {error && (
-            <div className="p-4 bg-red-500/10 border border-red-500/50 rounded-md text-red-400">
+            <div
+              style={{
+                padding: "12px 16px",
+                marginBottom: 24,
+                backgroundColor: "#ffebe9",
+                border: "1px solid #cf222e",
+                borderRadius: 6,
+                color: "#cf222e",
+                fontSize: 14,
+              }}
+            >
               {error}
             </div>
           )}
 
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">
-              Organization name <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="My Organization"
-              required
-              className="w-full px-3 py-2 bg-[#0d1117] border border-[#30363d] rounded-md text-white placeholder-[#484f58] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] outline-none"
-            />
-          </div>
+          <Card>
+            <SectionTitle>Organization Details</SectionTitle>
 
-          {/* Slug */}
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">
-              URL slug <span className="text-red-400">*</span>
-            </label>
-            <div className="flex items-center">
-              <span className="text-[#8b949e] mr-2">gitchain.0711.io/orgs/</span>
-              <input
-                type="text"
-                value={formData.slug}
-                onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase() })}
-                placeholder="my-org"
-                required
-                pattern="^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
-                className="flex-1 px-3 py-2 bg-[#0d1117] border border-[#30363d] rounded-md text-white placeholder-[#484f58] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] outline-none"
-              />
-            </div>
-            <p className="text-xs text-[#8b949e] mt-1">
-              Lowercase letters, numbers, and hyphens only.
-            </p>
-          </div>
+            <div style={{ display: "grid", gap: 20 }}>
+              {/* Name */}
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: t.fg,
+                    marginBottom: 6,
+                  }}
+                >
+                  Organization name <span style={{ color: "#cf222e" }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  placeholder="My Organization"
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    fontSize: 14,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 6,
+                    backgroundColor: t.canvas,
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">
-              Description <span className="text-[#8b949e]">(optional)</span>
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="What does your organization do?"
-              rows={3}
-              className="w-full px-3 py-2 bg-[#0d1117] border border-[#30363d] rounded-md text-white placeholder-[#484f58] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] outline-none resize-none"
-            />
-          </div>
-
-          {/* Website */}
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">
-              Website <span className="text-[#8b949e]">(optional)</span>
-            </label>
-            <input
-              type="url"
-              value={formData.website}
-              onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-              placeholder="https://example.com"
-              className="w-full px-3 py-2 bg-[#0d1117] border border-[#30363d] rounded-md text-white placeholder-[#484f58] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] outline-none"
-            />
-          </div>
-
-          <hr className="border-[#30363d]" />
-
-          {/* Info */}
-          <div className="p-4 bg-[#161b22] border border-[#30363d] rounded-lg">
-            <div className="flex gap-3">
-              <span className="text-xl">🏢</span>
-              <div className="text-sm text-[#8b949e]">
-                <p className="mb-2">
-                  <strong className="text-white">You&apos;ll be the owner</strong> of this organization with full admin access.
+              {/* Slug */}
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: t.fg,
+                    marginBottom: 6,
+                  }}
+                >
+                  URL slug <span style={{ color: "#cf222e" }}>*</span>
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 13, color: t.fgMuted, whiteSpace: "nowrap" }}>
+                    gitchain.0711.io/orgs/
+                  </span>
+                  <input
+                    type="text"
+                    value={slug}
+                    onChange={(e) =>
+                      setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
+                    }
+                    placeholder="my-org"
+                    required
+                    style={{
+                      flex: 1,
+                      padding: "10px 12px",
+                      fontSize: 14,
+                      fontFamily: mono,
+                      border: `1px solid ${t.border}`,
+                      borderRadius: 6,
+                      backgroundColor: t.canvas,
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+                <p style={{ fontSize: 12, color: t.fgMuted, marginTop: 4 }}>
+                  Lowercase letters, numbers, and hyphens only.
                 </p>
-                <p>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: t.fg,
+                    marginBottom: 6,
+                  }}
+                >
+                  Description{" "}
+                  <span style={{ color: t.fgMuted, fontWeight: 400, fontSize: 12 }}>
+                    (optional)
+                  </span>
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
+                  placeholder="What does your organization do?"
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    fontSize: 14,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 6,
+                    backgroundColor: t.canvas,
+                    resize: "vertical",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Info box */}
+            <div
+              style={{
+                marginTop: 20,
+                padding: 16,
+                backgroundColor: t.canvas,
+                border: `1px solid ${t.border}`,
+                borderRadius: 6,
+                display: "flex",
+                gap: 12,
+              }}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 16 16"
+                fill={t.fgMuted}
+                style={{ flexShrink: 0, marginTop: 2 }}
+              >
+                <path d="M1.75 16A1.75 1.75 0 0 1 0 14.25V1.75C0 .784.784 0 1.75 0h8.5C11.216 0 12 .784 12 1.75v12.5c0 .085-.006.168-.018.25h2.268a.25.25 0 0 0 .25-.25V8.285a.25.25 0 0 0-.111-.208l-1.055-.703a.749.749 0 1 1 .832-1.248l1.055.703c.487.325.777.871.777 1.456v5.965A1.75 1.75 0 0 1 14.25 16h-3.5a.766.766 0 0 1-.197-.026c-.099.017-.2.026-.303.026h-3a.75.75 0 0 1-.75-.75V14h-1v1.25a.75.75 0 0 1-.75.75Zm-.25-1.75c0 .138.112.25.25.25H4v-1.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 .75.75v1.25h2.25a.25.25 0 0 0 .25-.25V1.75a.25.25 0 0 0-.25-.25h-8.5a.25.25 0 0 0-.25.25ZM3.75 6h.5a.75.75 0 0 1 0 1.5h-.5a.75.75 0 0 1 0-1.5ZM3 3.75A.75.75 0 0 1 3.75 3h.5a.75.75 0 0 1 0 1.5h-.5A.75.75 0 0 1 3 3.75ZM3.75 9h.5a.75.75 0 0 1 0 1.5h-.5a.75.75 0 0 1 0-1.5ZM7 3.75A.75.75 0 0 1 7.75 3h.5a.75.75 0 0 1 0 1.5h-.5A.75.75 0 0 1 7 3.75ZM7.75 6h.5a.75.75 0 0 1 0 1.5h-.5a.75.75 0 0 1 0-1.5ZM7 9.75A.75.75 0 0 1 7.75 9h.5a.75.75 0 0 1 0 1.5h-.5A.75.75 0 0 1 7 9.75Z" />
+              </svg>
+              <div style={{ fontSize: 13, color: t.fgMuted, lineHeight: 1.5 }}>
+                <p style={{ margin: "0 0 4px" }}>
+                  <strong style={{ color: t.fg }}>You will be the owner</strong> of this
+                  organization with full admin access.
+                </p>
+                <p style={{ margin: 0 }}>
                   You can invite team members and manage permissions after creation.
                 </p>
               </div>
             </div>
-          </div>
 
-          <hr className="border-[#30363d]" />
-
-          {/* Submit */}
-          <div className="flex items-center justify-between">
-            <Link href="/orgs" className="text-[#8b949e] hover:text-white transition-colors">
-              Cancel
-            </Link>
-            <button
-              type="submit"
-              disabled={!formData.name || !formData.slug || isSubmitting}
-              className="px-6 py-2 bg-[#238636] hover:bg-[#2ea043] disabled:bg-[#238636]/50 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors"
-            >
-              {isSubmitting ? "Creating..." : "Create organization"}
-            </button>
-          </div>
+            <div style={{ marginTop: 24, display: "flex", gap: 12 }}>
+              <button
+                type="submit"
+                disabled={loading || !name || !slug}
+                style={{
+                  padding: "10px 20px",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  backgroundColor: !loading && name && slug ? t.accent : "#8b949e",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 6,
+                  cursor: !loading && name && slug ? "pointer" : "not-allowed",
+                }}
+              >
+                {loading ? "Creating..." : "Create organization"}
+              </button>
+              <button
+                type="button"
+                onClick={() => router.back()}
+                style={{
+                  padding: "10px 20px",
+                  fontSize: 14,
+                  fontWeight: 500,
+                  backgroundColor: "#fff",
+                  color: t.fg,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 6,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </Card>
         </form>
       </div>
-    </div>
+    </AppShell>
   );
 }

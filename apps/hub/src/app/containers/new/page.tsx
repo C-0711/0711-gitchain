@@ -1,25 +1,67 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 type ContainerType = "product" | "campaign" | "project" | "memory" | "knowledge";
 type Visibility = "public" | "private" | "internal";
 
-const containerTypes: { value: ContainerType; label: string; icon: string; description: string }[] = [
-  { value: "product", label: "Product", icon: "📦", description: "Product data, specs, and documentation" },
-  { value: "knowledge", label: "Knowledge", icon: "📚", description: "Documentation, guides, and references" },
-  { value: "project", label: "Project", icon: "🎯", description: "Project context and briefings" },
-  { value: "campaign", label: "Campaign", icon: "📢", description: "Marketing campaigns and assets" },
-  { value: "memory", label: "Memory", icon: "🧠", description: "AI agent memory and preferences" },
-];
+const containerTypes: { value: ContainerType; label: string; icon: string; description: string }[] =
+  [
+    {
+      value: "product",
+      label: "Product",
+      icon: "📦",
+      description: "Product data, specs, and documentation",
+    },
+    {
+      value: "knowledge",
+      label: "Knowledge",
+      icon: "📚",
+      description: "Documentation, guides, and references",
+    },
+    {
+      value: "project",
+      label: "Project",
+      icon: "🎯",
+      description: "Project context and briefings",
+    },
+    {
+      value: "campaign",
+      label: "Campaign",
+      icon: "📢",
+      description: "Marketing campaigns and assets",
+    },
+    {
+      value: "memory",
+      label: "Memory",
+      icon: "🧠",
+      description: "AI agent memory and preferences",
+    },
+  ];
 
-const visibilityOptions: { value: Visibility; label: string; icon: string; description: string }[] = [
-  { value: "public", label: "Public", icon: "🌐", description: "Anyone can see and inject this container" },
-  { value: "private", label: "Private", icon: "🔒", description: "Only you and collaborators can access" },
-  { value: "internal", label: "Internal", icon: "🏢", description: "Only organization members can access" },
-];
+const visibilityOptions: { value: Visibility; label: string; icon: string; description: string }[] =
+  [
+    {
+      value: "public",
+      label: "Public",
+      icon: "🌐",
+      description: "Anyone can see and inject this container",
+    },
+    {
+      value: "private",
+      label: "Private",
+      icon: "🔒",
+      description: "Only you and collaborators can access",
+    },
+    {
+      value: "internal",
+      label: "Internal",
+      icon: "🏢",
+      description: "Only organization members can access",
+    },
+  ];
 
 export default function NewContainerPage() {
   const router = useRouter();
@@ -47,7 +89,7 @@ export default function NewContainerPage() {
 
     try {
       // Get auth token from localStorage
-      const token = localStorage.getItem("gitchain_token");
+      const token = localStorage.getItem("token");
       if (!token) {
         router.push("/auth/login?redirect=/containers/new");
         return;
@@ -57,7 +99,7 @@ export default function NewContainerPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           type: formData.type,
@@ -145,7 +187,10 @@ export default function NewContainerPage() {
             </div>
             {identifier && (
               <p className="text-sm text-[#8b949e]">
-                Container ID: <code className="text-[#58a6ff]">0711:{formData.type}:{formData.namespace || "personal"}:{identifier}:v1</code>
+                Container ID:{" "}
+                <code className="text-[#58a6ff]">
+                  0711:{formData.type}:{formData.namespace || "personal"}:{identifier}:v1
+                </code>
               </p>
             )}
           </div>
@@ -169,9 +214,7 @@ export default function NewContainerPage() {
 
           {/* Container Type */}
           <div>
-            <label className="block text-sm font-medium text-white mb-4">
-              Container type
-            </label>
+            <label className="block text-sm font-medium text-white mb-4">Container type</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {containerTypes.map((type) => (
                 <button
@@ -199,9 +242,7 @@ export default function NewContainerPage() {
 
           {/* Visibility */}
           <div>
-            <label className="block text-sm font-medium text-white mb-4">
-              Visibility
-            </label>
+            <label className="block text-sm font-medium text-white mb-4">Visibility</label>
             <div className="space-y-3">
               {visibilityOptions.map((option) => (
                 <label
@@ -238,7 +279,8 @@ export default function NewContainerPage() {
               <span className="text-xl">💡</span>
               <div className="text-sm text-[#8b949e]">
                 <p className="mb-2">
-                  <strong className="text-white">Private containers</strong> are only visible to you and people you explicitly invite.
+                  <strong className="text-white">Private containers</strong> are only visible to you
+                  and people you explicitly invite.
                 </p>
                 <p>
                   You can change visibility and add collaborators anytime in container settings.
@@ -252,10 +294,7 @@ export default function NewContainerPage() {
 
           {/* Submit */}
           <div className="flex items-center justify-between">
-            <Link
-              href="/containers"
-              className="text-[#8b949e] hover:text-white transition-colors"
-            >
+            <Link href="/containers" className="text-[#8b949e] hover:text-white transition-colors">
               Cancel
             </Link>
             <button
